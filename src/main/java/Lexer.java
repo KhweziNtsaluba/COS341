@@ -1,9 +1,13 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
-
 public class Lexer {
-    public String data = "";
+    private String data = "";
+    private Map<String, TokenClass> classes;
+
+    private int currentPos = 0; //current position in the string
 
     public Lexer(String filename){
 
@@ -25,5 +29,14 @@ public class Lexer {
         }
     }
 
-    
+    //produces a list of tokens (or an error for invalid input)
+    List<Token> tokenize(String inputStream){
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    //generates a new token
+    private void nextToken(){
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
 }
