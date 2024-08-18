@@ -24,10 +24,14 @@ public class Token {
 
     //returns token XML
     public String toString(){
-        return "<TOK>\n\n" +
-           "<ID>" + id + "</ID>\n\n" +
-           "<CLASS>" + tokenClass + "</CLASS> // comment: The class corresponds to some Accept-State of the DFA\n\n" +
-           "<WORD>" + tokenWord + "</WORD>\n\n" +
-           "</TOK>";
+        return 
+            "<TOK>"                                 +System.lineSeparator() +
+            "<ID>" + id + "</ID>"                   +System.lineSeparator() +
+            "<CLASS>" + tokenClass
+                .toString()
+                .toLowerCase() + "</CLASS>"         +System.lineSeparator() +
+            "<WORD>" + tokenWord + "</WORD>"        +System.lineSeparator() +
+            "</TOK>"                                +System.lineSeparator()
+        ;
     }
 }

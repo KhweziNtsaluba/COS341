@@ -1,1 +1,3 @@
-hello world
+"Hellothe"
+V_somevar
+if (V_var1 grt 10) { V_var2 = V_var1 add 5; }
