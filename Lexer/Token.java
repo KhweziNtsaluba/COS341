@@ -1,23 +1,32 @@
 public class Token {
-    private int id;
-    private String tokenClass;
-    private String word;
+    private TokenType type;
+    private String value;
+    private int lineNumber;
 
-    public Token(int id, String tokenClass, String word) {
-        this.id = id;
-        this.tokenClass = tokenClass;
-        this.word = word;
+    public Token(TokenType type, String value, int lineNumber) {
+        this.type = type;
+        this.value = value;
+        this.lineNumber = lineNumber;
     }
 
-    public int getId() {
-        return id;
+    public TokenType getType() {
+        return type;
     }
 
-    public String getTokenClass() {
-        return tokenClass;
+    public String getValue() {
+        return value;
     }
 
-    public String getWord() {
-        return word;
+    public int getLineNumber() {
+        return lineNumber;
+    }
+
+    @Override
+    public String toString() {
+        return "Token{" +
+                "type=" + type +
+                ", value='" + value + '\'' +
+                ", lineNumber=" + lineNumber +
+                '}';
     }
 }
