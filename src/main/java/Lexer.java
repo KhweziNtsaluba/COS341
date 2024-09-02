@@ -8,7 +8,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-public class Lexer {
+public class Lexer { 
     private String data = "";
     private Map<String, TokenClass> classes = new HashMap<>();
 
