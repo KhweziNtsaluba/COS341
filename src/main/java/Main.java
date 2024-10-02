@@ -12,8 +12,15 @@ public class Main {
         System.out.println("reading from " + inputFile);
 
         //generate token xml
-        lexer = new Lexer(inputFile);
-        System.out.println(lexer.tokenize());
+        // lexer = new Lexer(inputFile);
+        // System.out.println(lexer.tokenize());
+
+        ParseTable pt = new ParseTable();
+        pt.displayTables();
+        // Parser parser = new Parser(pt);
+        // parser.parse(inputFile);
+
+// lexer
     }
     
 }
