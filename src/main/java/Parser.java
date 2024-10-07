@@ -36,8 +36,10 @@ public class Parser {
     // endloop
     void parse(File tokenFile){
         // parse token file
-        // validate that input is indeed in the grammar
-        // resolve any conflicts/ambiguities by means of precedence
+        // store tokens in an array
+        // while there are still tokens in the array
+            // validate that input is indeed in the grammar
+            // resolve any conflicts/ambiguities by means of precedence
         // create parse tree
         // output [tree?] as xml 
     }
