@@ -1,12 +1,12 @@
 import java.util.ArrayList;
 import java.util.List;
 
-class ASTNode {
-    String type;  // Type of the node (non-terminal or token type)
-    List<ASTNode> children;  // Children of this node
+public class ASTNode {
+    private String value;
+    private List<ASTNode> children;
 
-    public ASTNode(String type) {
-        this.type = type;
+    public ASTNode(String value) {
+        this.value = value;
         this.children = new ArrayList<>();
     }
 
@@ -16,6 +16,10 @@ class ASTNode {
 
     @Override
     public String toString() {
-        return type + " -> " + children;
+        StringBuilder sb = new StringBuilder(value);
+        if (!children.isEmpty()) {
+            sb.append(" -> ").append(children);
+        }
+        return sb.toString();
     }
 }
