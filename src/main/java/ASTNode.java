@@ -14,6 +14,15 @@ public class ASTNode {
         children.add(child);
     }
 
+    // Add the missing getChildren() and getValue() methods
+    public List<ASTNode> getChildren() {
+        return children;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(value);
