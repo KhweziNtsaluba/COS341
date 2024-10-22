@@ -2,12 +2,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ASTNode {
-    private String type;
     private String value;  // For storing constant values like "2" or "3"
     private List<ASTNode> children;
 
-    public ASTNode(String type) {
-        this.type = type;
+    public ASTNode(String value) {
+        this.value = value;
         this.children = new ArrayList<>();
     }
 
@@ -16,10 +15,6 @@ public class ASTNode {
         this.children.add(child);
     }
 
-    // Getter for node type
-    public String getType() {
-        return this.type;
-    }
 
     // Getter for children
     public List<ASTNode> getChildren() {
@@ -40,7 +35,6 @@ public class ASTNode {
     public String toString() {
         // A simple string representation of the node
         StringBuilder sb = new StringBuilder();
-        sb.append(type);
         if (value != null) {
             sb.append(" (").append(value).append(")");
         }
