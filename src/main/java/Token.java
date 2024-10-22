@@ -9,6 +9,12 @@ public class Token {
         this.tokenWord = tokenName; 
         this.id = ID_COUNTER++;
     }
+
+    public Token(TokenClass tokenClass, String tokenName, int ID){
+        this.tokenClass = tokenClass;
+        this.tokenWord = tokenName; 
+        this.id = ID;
+    }
     
     public TokenClass getTokenClass() {
         return tokenClass;

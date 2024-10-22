@@ -3,10 +3,10 @@ import java.util.*;
 public class Parser {
     private ParseTable parseTable;
     private Deque<Integer> stateStack;  // Stack to hold states
-    private List<String> tokens;  // The input token stream
+    private List<Token> tokens;  // The input token stream
     private Deque<ASTNode> astStack;  // Stack to hold AST nodes
 
-    public Parser(ParseTable parseTable, List<String> tokens) {
+    public Parser(ParseTable parseTable, List<Token> tokens) {
         this.parseTable = parseTable;
         this.tokens = tokens;
         this.stateStack = new ArrayDeque<>();
@@ -18,7 +18,11 @@ public class Parser {
         int tokenIndex = 0;
     
         while (tokenIndex < tokens.size()) {
-            String currentToken = tokens.get(tokenIndex);
+            Token currentToken = tokens.get(tokenIndex);
+            System.out.println(
+                stateStack + " | "
+                + currentToken.getTokenWord() + " | "
+            );
             int currentState = stateStack.peek();
     
             // Get the action for the current state and input token
@@ -36,7 +40,7 @@ public class Parser {
                     tokenIndex++;  // Move to the next token
     
                     // Create an AST node for the token and push it onto the AST stack
-                    ASTNode tokenNode = new ASTNode(currentToken);
+                    ASTNode tokenNode = new LeafTreeNode(currentToken);
                     astStack.push(tokenNode);
                     break;
     
@@ -48,7 +52,7 @@ public class Parser {
                         return false;  // Not enough elements to reduce
                     }
     
-                    ASTNode parentNode = new ASTNode(getNonTerminal(action.getNumber()));  // Create a new AST node
+                    ASTNode parentNode = new InternalTreeNode(getNonTerminal(action.getNumber()));  // Create a new AST node
     
                     // Pop the right number of AST nodes and add them as children of the parent node
                     for (int i = 0; i < productionLength; i++) {
@@ -185,30 +189,31 @@ public class Parser {
     }
     public static void main(String[] args) {
         ParseTable table = new ParseTable();
-        List<String> tokens = Arrays.asList(
-            "main",            // Start of the program
-            "num",             // Variable type for the first global variable (VTYP)
-            "V_somevar",       // First variable name (VNAME)
-            ",",               // Comma to separate variable declarations
-            "text",            // Variable type for the second global variable (VTYP)
-            "V_Hellothe",      // Second variable name (VNAME)
-            "begin",           // Start of the algorithm (ALGO)
-            "if",              // Start of a conditional statement (BRANCH)
-            "(",               // Opening parenthesis for condition
-            "V_var1",         // First variable in condition (ATOMIC)
-            "grt",             // Greater than operator (BINOP)
-            "10",              // Constant in condition (CONST)
-            ")",               // Closing parenthesis for condition
-            "{",               // Opening brace for the block
-            "V_var2",         // Variable on the left side of an assignment (VNAME)
-            "=",               // Assignment operator
-            "V_var1",         // Variable being assigned (ATOMIC)
-            "add",             // Addition operator
-            "5",               // Constant to add (CONST)
-            ";",               // End of the statement
-            "}",               // Closing brace for the block
-            "end",             // End of the algorithm (ALGO)
-            "$"                // End of input
+        
+        List<Token> tokens = Arrays.asList(
+            new Token(TokenClass.RESERVED_KEYWORD, "main", 0),               // Start of the program
+            new Token(TokenClass.RESERVED_KEYWORD, "num", 1),                // Variable type for the first global variable (VTYP)
+            new Token(TokenClass.VARIABLE, "V_somevar", 2),                  // First variable name (VNAME)
+            new Token(TokenClass.RESERVED_KEYWORD, ",", 3),                  // Comma to separate variable declarations
+            new Token(TokenClass.RESERVED_KEYWORD, "text", 4),               // Variable type for the second global variable (VTYP)
+            new Token(TokenClass.VARIABLE, "V_Hellothe", 5),                 // Second variable name (VNAME)
+            new Token(TokenClass.RESERVED_KEYWORD, "begin", 6),              // Start of the algorithm (ALGO)
+            new Token(TokenClass.RESERVED_KEYWORD, "if", 7),                 // Start of a conditional statement (BRANCH)
+            new Token(TokenClass.RESERVED_KEYWORD, "(", 8),                  // Opening parenthesis for condition
+            new Token(TokenClass.VARIABLE, "V_var1", 9),                     // First variable in condition (ATOMIC)
+            new Token(TokenClass.RESERVED_KEYWORD, "grt", 10),               // Greater than operator (BINOP)
+            new Token(TokenClass.NUMBER, "10", 11),                          // Constant in condition (CONST)
+            new Token(TokenClass.RESERVED_KEYWORD, ")", 12),                 // Closing parenthesis for condition
+            new Token(TokenClass.RESERVED_KEYWORD, "{", 13),                 // Opening brace for the block
+            new Token(TokenClass.VARIABLE, "V_var2", 14),                    // Variable on the left side of an assignment (VNAME)
+            new Token(TokenClass.RESERVED_KEYWORD, "=", 15),                 // Assignment operator
+            new Token(TokenClass.VARIABLE, "V_var1", 16),                    // Variable being assigned (ATOMIC)
+            new Token(TokenClass.RESERVED_KEYWORD, "add", 17),               // Addition operator
+            new Token(TokenClass.NUMBER, "5", 18),                           // Constant to add (CONST)
+            new Token(TokenClass.RESERVED_KEYWORD, ";", 19),                 // End of the statement
+            new Token(TokenClass.RESERVED_KEYWORD, "}", 20),                 // Closing brace for the block
+            new Token(TokenClass.RESERVED_KEYWORD, "end", 21),               // End of the algorithm (ALGO)
+            new Token(TokenClass.END_OF_INPUT, "$", 22)                      // End of input
         );
 
         Parser parser = new Parser(table, tokens);

@@ -470,22 +470,62 @@ public class ParseTable {
 
     // retrieve action from action table
     // a returned value of null implies that there is no action for a state cross-indexed with a symbol
-    public Action getAction(int state, String symbol) {
+    public Action getAction(int state, Token symbolToken) {
+        String symbol = null;
+        
+        switch(symbolToken.getTokenClass()){
+            
+            case RESERVED_KEYWORD: {
+                symbol = symbolToken.getTokenWord();
+                break;
+            }
+            
+            case VARIABLE: {
+                symbol = "V";
+                break;
+            }
+            
+            case TEXT: {
+                symbol = "T";
+                break;
+            }
+            
+            case USER_DEFINED_FUNCTION: {
+                symbol = "F";
+                break;
+            }
+            
+            case NUMBER: {
+                symbol = "N";
+                break;
+            }
+
+            case END_OF_INPUT: {
+                symbol = "$";
+                break;
+            }
+        }
+        
+        return actionTable.getOrDefault(state, new HashMap<>()).get(symbol);
+    }
+    
+    // only meant for displayTablesToFile() function 
+    private Action getAction(int state, String symbol) {
         return actionTable.getOrDefault(state, new HashMap<>()).get(symbol);
     }
 
     // retrieve (next) state from goto table
     // a returned value of null implies that there is no state returned for a state cross-indexed with a symbol
-    public Integer getGoto(int state, String symbol) {
-        return gotoTable.getOrDefault(state, new HashMap<>()).get(symbol);
+    public Integer getGoto(int state, String grammarVariable) {
+        return gotoTable.getOrDefault(state, new HashMap<>()).get(grammarVariable);
     }
-
+    
     public void displayTablesToFile(String fileName) {
         String[] terminals = {"main", ",", "num", "text", "V", "begin", "end", ";", "skip", "halt", "print", "return", "N", "T", "<", "input", "=", "(", ")", "if", "then", "else", "not", "sqrt", "or", "and", "eq", "grt", "add", "sub", "mul", "div", "F", "void", "{", "}", "$"};
         String[] nonTerminals = {"PROG", "GLOBVARS", "VTYP", "VNAME", "ALGO", "INSTRUC", "COMMAND", "ATOMIC", "CONST", "ASSIGN", "CALL", "BRANCH", "TERM", "OP", "ARG", "COND", "SIMPLE", "COMPOSIT", "UNOP", "BINOP", "FNAME", "FUNCTIONS", "DECL", "HEADER", "FTYP", "BODY", "PROLOG", "EPILOG", "LOCVARS", "SUBFUNCS"};
         
         try (FileWriter writer = new FileWriter(fileName)) {
-
+            
             // Write number of states
             int numStates = Math.max(actionTable.size(), gotoTable.size());
             writer.write("The parse table has " + numStates + " states\n");
