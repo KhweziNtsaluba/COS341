@@ -6,170 +6,224 @@
 //     // Symbol table to store variable and function types
 //     private Map<String, String> symbolTable = new HashMap<>();
 
-//     // Entry point for type checking the entire program
-//     public boolean typecheck(ProgramNode prog) {
-//         return typecheck(prog.getGlobVars()) && typecheck(prog.getAlgo()) && typecheck(prog.getFunctions());
-//     }
+    // Entry point for type checking the entire AST
+    public boolean checkProgram(ASTNode prog) {
+        // Assuming the first child is GlobalVars, second is Algo, and third is Functions
+        if (prog.getChildren().size() < 3) return false;
 
-//     // Type check for global variables
-//     private boolean typecheck(GlobalVarsNode globVars) {
-//         if (globVars == null) return true; // Base case
-//         VarDeclNode varDecl = globVars.getVarDecl();
-//         String varType = typeof(varDecl.getVarType());
-//         String varName = varDecl.getVarName();
+        ASTNode globVars = prog.getChildren().get(0);
+        ASTNode algo = prog.getChildren().get(1);
+        ASTNode functions = prog.getChildren().get(2);
 
-//         symbolTable.put(varName, varType); // Store in symbol table
-  
-//         return typecheck(globVars.getNext());
-//     }
+        return checkGlobalVars(globVars) && checkAlgo(algo) && checkFunctions(functions);
+    }
 
-//     // Type check for algorithm (instructions)
-//     private boolean typecheck(AlgoNode algo) {
-//         return algo == null || typecheck(algo.getInstruc());
-//     }
+    // Type check for global variables
+    private boolean checkGlobalVars(ASTNode globVars) {
+        if (globVars == null) return true; // Base case
 
-//     // Type check for instructions
-//     private boolean typecheck(InstrucNode instruc) {
-//         if (instruc == null) return true; // Base case
-//         return typecheck(instruc.getCommand()) && typecheck(instruc.getNext());
-//     }
+        // Process each variable declaration
+        for (ASTNode varDecl : globVars.getChildren()) {
+            if (varDecl.getChildren().size() < 2) {
+                System.out.println("Variable declaration does not have enough children.");
+                return false; // Should have at least type and name
+            }
+            String varType = typeof(varDecl.getChildren().get(0)); // Assuming 1st child is type
+            String varName = varDecl.getChildren().get(1).getValue(); // Assuming 2nd child is variable name
 
-//     // Type check for individual commands
-//     private boolean typecheck(CommandNode command) {
-//         if (command instanceof SkipCommand) return true;
-//         if (command instanceof HaltCommand) return true;
+            if (varType == null || varName == null) {
+                System.out.println("Error: Variable type or name is null.");
+                return false;
+            }
 
-//         if (command instanceof PrintCommand) {
-//             String type = typeof(((PrintCommand) command).getAtomic());
-//             return type.equals("n") || type.equals("t");
-//         }
+            symbolTable.put(varName, varType); // Store in symbol table
+        }
+        return true;
+    }
 
-//         if (command instanceof ReturnCommand) {
-//             AtomicNode atomic = ((ReturnCommand) command).getAtomic();
-//             String atomicType = typeof(atomic);
-//             String funcType = findFunctionTypeInScope(command); // Assuming scope analysis is done
+    // Type check for algorithm (instructions)
+    private boolean checkAlgo(ASTNode algo) {
+        // Assuming algo contains multiple instructions
+        for (ASTNode instruc : algo.getChildren()) {
+            if (!checkInstruction(instruc))
+                return false;
+        }
+        return true;
+    }
 
-//             return atomicType.equals(funcType);
-//         }
+    // Type check for individual instructions
+    private boolean checkInstruction(ASTNode instruc) {
+        String commandType = instruc.getValue(); // Instruction type as value
 
-//         if (command instanceof AssignCommand) {
-//             AssignCommand assign = (AssignCommand) command;
-//             String varType = symbolTable.get(assign.getVarName());
-//             String termType = typeof(assign.getTerm());
+        switch (commandType) {
+            case "skip":
+            case "halt":
+                return true;
 
-//             return varType != null && varType.equals(termType);
-//         }
+            case "print": {
+                String type = typeof(instruc.getChildren().get(0)); // Atomic node being printed
+                return type.equals("n") || type.equals("t");
+            }
 
-//         if (command instanceof CallCommand) {
-//             String callType = typeof(((CallCommand) command).getCall());
-//             return callType.equals("v");
-//         }
+            case "return": {
+                String returnType = typeof(instruc.getChildren().get(0)); // Atomic node being returned
+                String funcType = "n"; // Placeholder for actual function return type
+                return returnType.equals(funcType);
+            }
 
-//         if (command instanceof BranchCommand) {
-//             BranchCommand branch = (BranchCommand) command;
-//             String condType = typeof(branch.getCond());
-//             if (!condType.equals("b")) return false;
-//             return typecheck(branch.getAlgo1()) && typecheck(branch.getAlgo2());
-//         }
+            case "assign": {
+                String varName = instruc.getChildren().get(0).getValue(); // Get the variable name
+                String termType = typeof(instruc.getChildren().get(1)); // Term node being assigned
+                String varType = symbolTable.get(varName);
 
-//         return false;
-//     }
+                return varType != null && varType.equals(termType);
+            }
 
-//     // Type checking for functions
-//     private boolean typecheck(FunctionsNode functions) {
-//         if (functions == null) return true; // Base case
-//         return typecheck(functions.getDecl()) && typecheck(functions.getNext());
-//     }
+            case "call": {
+                String callType = typeof(instruc.getChildren().get(0)); // Call node
+                return callType.equals("v");
+            }
 
-//     private boolean typecheck(DeclNode decl) {
-//         return typecheck(decl.getHeader()) && typecheck(decl.getBody());
-//     }
+            case "branch": {
+                String condType = typeof(instruc.getChildren().get(0)); // Condition node
+                if (!condType.equals("b"))
+                    return false;
+                return checkAlgo(instruc.getChildren().get(1)) && checkAlgo(instruc.getChildren().get(2)); // Two branches
+            }
 
-//     // Type check for function headers
-//     private boolean typecheck(HeaderNode header) {
-//         String returnType = typeof(header.getFtyp());
-//         String funcName = header.getFname();
-//         symbolTable.put(funcName, returnType); // Store function type in symbol table
+            default:
+                return false;
+        }
+    }
 
-//         for (VarDeclNode param : header.getParams()) {
-//             if (!typeof(param.getVarType()).equals("n")) { // RecSPL only allows numeric arguments
-//                 return false;
-//             }
-//         }
-//         return true;
-//     }
+    // Type check for functions
+    private boolean checkFunctions(ASTNode functions) {
+        // Assuming functions node contains multiple function declarations
+        for (ASTNode functionDecl : functions.getChildren()) {
+            if (!checkFunction(functionDecl))
+                return false;
+        }
+        return true;
+    }
 
-//     // Type check for function bodies
-//     private boolean typecheck(BodyNode body) {
-//         return typecheck(body.getProlog()) && typecheck(body.getLocVars()) &&
-//                typecheck(body.getAlgo()) && typecheck(body.getEpilog()) &&
-//                typecheck(body.getSubFuncs());
-//     }
+    // Type check for a single function declaration
+    private boolean checkFunction(ASTNode functionDecl) {
+        // Assuming first child is the header, second is the body
+        ASTNode header = functionDecl.getChildren().get(0);
+        ASTNode body = functionDecl.getChildren().get(1);
 
-//     // Type checking for atomic values (variables, constants)
-//     private String typeof(AtomicNode atomic) {
-//         if (atomic instanceof VarNode) {
-//             return symbolTable.get(((VarNode) atomic).getVarName());
-//         }
-//         if (atomic instanceof ConstNode) {
-//             return typeofConst((ConstNode) atomic);
-//         }
-//         return "u"; // Undefined
-//     }
+        return checkHeader(header) && checkBody(body);
+    }
 
-//     private String typeofConst(ConstNode constant) {
-//         if (constant.getTokenClass().equals("N")) return "n"; // Numeric constant
-//         if (constant.getTokenClass().equals("T")) return "t"; // Text constant
-//         return "u"; // Undefined
-//     }
+    // Type check for function headers
+    private boolean checkHeader(ASTNode header) {
+        String returnType = typeof(header.getChildren().get(0)); // First child is return type
+        String funcName = header.getValue(); // Function name
 
-//     // Type check for terms (atomic, call, or operation)
-//     private String typeof(TermNode term) {
-//         if (term instanceof AtomicNode) {
-//             return typeof((AtomicNode) term);
-//         }
-//         if (term instanceof CallNode) {
-//             return typeof((CallNode) term);
-//         }
-//         if (term instanceof OpNode) {
-//             return typeof((OpNode) term);
-//         }
-//         return "u"; // Undefined
-//     }
+        symbolTable.put(funcName, returnType); // Store function type in symbol table
 
-//     private String typeof(CallNode call) {
-//         for (AtomicNode arg : call.getArgs()) {
-//             if (!typeof(arg).equals("n")) return "u"; // All function arguments must be numeric
-//         }
-//         return symbolTable.get(call.getFname());
-//     }
+        for (ASTNode param : header.getChildren().subList(1, header.getChildren().size())) {
+            if (!typeof(param).equals("n")) { // Assuming all parameters must be numeric
+                return false;
+            }
+        }
+        return true;
+    }
 
-//     private String typeof(OpNode op) {
-//         if (op instanceof UnOpNode) {
-//             return typeofUnOp((UnOpNode) op);
-//         }
-//         if (op instanceof BinOpNode) {
-//             return typeofBinOp((BinOpNode) op);
-//         }
-//         return "u"; // Undefined
-//     }
+    // Type check for function bodies
+    private boolean checkBody(ASTNode body) {
+        return checkAlgo(body.getChildren().get(0)); // Assuming body contains algorithm nodes
+    }
 
-//     private String typeofUnOp(UnOpNode unOp) {
-//         if (unOp.getOpType().equals("not")) return "b"; // Boolean type
-//         if (unOp.getOpType().equals("sqrt")) return "n"; // Numeric type
-//         return "u"; // Undefined
-//     }
+    // Type checking for atomic values (variables, constants)
+    private String typeof(ASTNode node) {
+        if (node == null) return null; // Handle null case
 
-//     private String typeofBinOp(BinOpNode binOp) {
-//         if (binOp.getOpType().equals("or") || binOp.getOpType().equals("and")) return "b";
-//         if (binOp.getOpType().equals("add") || binOp.getOpType().equals("sub") ||
-//             binOp.getOpType().equals("mul") || binOp.getOpType().equals("div")) return "n";
-//         if (binOp.getOpType().equals("eq") || binOp.getOpType().equals("grt")) return "c"; // Comparison type
-//         return "u"; // Undefined
-//     }
+        String nodeType = node.getValue(); // Get the value representing the node type
 
-//     private String findFunctionTypeInScope(CommandNode command) {
-//         // Placeholder for looking up the function's return type from the syntax tree scope
-//         return "n"; // Assume numeric type for simplicity
-//     }
-// }
+        if (nodeType == null) {
+            System.out.println("Warning: ASTNode value is null");
+            return null; // Added warning and return null if nodeType is null
+        }
+
+        switch (nodeType) {
+            case "Var":
+                if (node.getChildren().isEmpty()) {
+                    System.out.println("Error: Var node has no children.");
+                    return null; // Return null if no children are present
+                }
+                return symbolTable.get(node.getChildren().get(0).getValue()); // Variable name
+            case "Const":
+                return typeofConst(node);
+            default:
+                return "u"; // Undefined
+        }
+    }
+
+    private String typeofConst(ASTNode constant) {
+        String tokenClass = constant.getValue();
+        if (tokenClass.equals("N"))
+            return "n"; // Numeric constant
+        if (tokenClass.equals("T"))
+            return "t"; // Text constant
+        return "u"; // Undefined
+    }
+
+    public static void main(String[] args) {
+        // Create the root of the program AST
+        ASTNode program = new ASTNode("Program");
+
+        // Create a GlobalVars node with a variable declaration
+        ASTNode globalVars = new ASTNode("GlobalVars");
+        ASTNode varDecl = new ASTNode("VarDecl"); // VarDecl -> type + name
+        ASTNode varType = new ASTNode("n"); // 'n' stands for numeric
+        ASTNode varName = new ASTNode("myVar");
+        varDecl.addChild(varType); // Add type as first child
+        varDecl.addChild(varName); // Add variable name as second child
+        globalVars.addChild(varDecl); // Add var declaration to globalVars
+
+        // Create an Algorithm node (Algo) with a print instruction
+        ASTNode algo = new ASTNode("Algo");
+        ASTNode printInstr = new ASTNode("print");
+        ASTNode printValue = new ASTNode("Var");
+        printValue.addChild(new ASTNode("myVar")); // Variable to be printed
+        printInstr.addChild(printValue);
+        algo.addChild(printInstr); // Add print instruction to algorithm
+
+        // Create a Functions node with a function declaration
+        ASTNode functions = new ASTNode("Functions");
+        ASTNode funcDecl = new ASTNode("FuncDecl"); // FuncDecl -> header + body
+        ASTNode funcHeader = new ASTNode("FuncHeader");
+        ASTNode returnType = new ASTNode("n"); // Return type is numeric
+        ASTNode funcNameNode = new ASTNode("myFunction");
+        ASTNode param = new ASTNode("n"); // Parameter type is numeric
+        funcHeader.addChild(returnType); // Add return type
+        funcHeader.addChild(funcNameNode); // Add function name
+        funcHeader.addChild(param); // Add parameter
+        funcDecl.addChild(funcHeader); // Add header to function declaration
+
+        ASTNode funcBody = new ASTNode("Algo"); // Function body as an algorithm
+        ASTNode assignInstr = new ASTNode("assign");
+        ASTNode assignVar = new ASTNode("Var");
+        assignVar.addChild(new ASTNode("myVar")); // Assigning to myVar
+        ASTNode assignValue = new ASTNode("Const");
+        assignValue.addChild(new ASTNode("N")); // Assigning a numeric constant
+        assignInstr.addChild(assignVar);
+        assignInstr.addChild(assignValue);
+        funcBody.addChild(assignInstr); // Add assign instruction to function body
+        funcDecl.addChild(funcBody); // Add body to function declaration
+        functions.addChild(funcDecl); // Add function declaration to functions
+
+        // Build the program structure
+        program.addChild(globalVars);
+        program.addChild(algo);
+        program.addChild(functions);
+
+        // Create and run the type checker
+        TypeChecker checker = new TypeChecker();
+        boolean typeCheckPassed = checker.checkProgram(program);
+
+        // Output result
+        System.out.println("Type checking passed: " + typeCheckPassed);
+    }
+}
