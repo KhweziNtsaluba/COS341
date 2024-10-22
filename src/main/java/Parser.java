@@ -51,23 +51,31 @@ public class Parser {
                         System.out.println("Syntax error: insufficient elements for reduction.");
                         return false;  // Not enough elements to reduce
                     }
-    
+                    
                     ASTNode parentNode = new InternalTreeNode(getNonTerminal(action.getNumber()));  // Create a new AST node
-    
+                    
                     // Pop the right number of AST nodes and add them as children of the parent node
                     for (int i = 0; i < productionLength; i++) {
                         parentNode.addChild(astStack.pop());
                         stateStack.pop();
                     }
+                    System.out.println("Reduced using production " + action.getNumber());
     
                     // Push the newly created parent node onto the AST stack
                     astStack.push(parentNode);
     
                     // Use goto table to transition after the reduction
-                    int nextState = parseTable.getGoto(stateStack.peek(), getNonTerminal(action.getNumber()));
-                    stateStack.push(nextState);
+
+                    try{
+                        int nextState = parseTable.getGoto(stateStack.peek(), getNonTerminal(action.getNumber()));
+                        stateStack.push(nextState);
+                    }
+                    catch(NullPointerException e){
+                        System.out.println("Goto state jump is null in parse table - Check that getProduction length returns the correct result");
+                        throw e;
+                    }
+                    
     
-                    System.out.println("Reduced using production " + action.getNumber());
                     break;
     
                 case ACCEPT:
@@ -91,65 +99,65 @@ public class Parser {
     private int getProductionLength(int productionNumber) {
         // Array where index corresponds to productionNumber, and value is the length of RHS of the production
         int[] productionLengths = new int[] {
-            4,  // PROG -> main GLOBVARS ALGO FUNCTIONS
-            0,  // GLOBVARS -> ''
-            4,  // GLOBVARS -> VTYP VNAME , GLOBVARS
-            1,  // VTYP -> num
-            1,  // VTYP -> text
-            1,  // VNAME -> V
-            3,  // ALGO -> begin INSTRUC end
-            0,  // INSTRUC -> ''
-            3,  // INSTRUC -> COMMAND ; INSTRUC
-            1,  // COMMAND -> skip
-            1,  // COMMAND -> halt
-            2,  // COMMAND -> print ATOMIC
-            1,  // COMMAND -> ASSIGN
-            1,  // COMMAND -> CALL
-            1,  // COMMAND -> BRANCH
-            1,  // ATOMIC -> VNAME
-            1,  // ATOMIC -> CONST
-            1,  // CONST -> N
-            1,  // CONST -> T
-            3,  // ASSIGN -> VNAME < input
-            3,  // ASSIGN -> VNAME = TERM
-            6,  // CALL -> FNAME ( ATOMIC , ATOMIC , ATOMIC )
-            7,  // BRANCH -> if COND then ALGO else ALGO
-            1,  // TERM -> ATOMIC
-            1,  // TERM -> CALL
-            1,  // TERM -> OP
-            3,  // OP -> UNOP ( ARG )
-            5,  // OP -> BINOP ( ARG , ARG )
-            1,  // ARG -> ATOMIC
-            1,  // ARG -> OP
-            1,  // COND -> SIMPLE
-            1,  // COND -> COMPOSIT
-            5,  // SIMPLE -> BINOP ( ATOMIC , ATOMIC )
-            5,  // COMPOSIT -> BINOP ( SIMPLE , SIMPLE )
-            3,  // COMPOSIT -> UNOP ( SIMPLE )
-            1,  // UNOP -> not
-            1,  // UNOP -> sqrt
-            1,  // BINOP -> or
-            1,  // BINOP -> and
-            1,  // BINOP -> eq
-            1,  // BINOP -> grt
-            1,  // BINOP -> add
-            1,  // BINOP -> sub
-            1,  // BINOP -> mul
-            1,  // BINOP -> div
-            1,  // FNAME -> F
-            0,  // FUNCTIONS -> ''
-            2,  // FUNCTIONS -> DECL FUNCTIONS
-            2,  // DECL -> HEADER BODY
-            6,  // HEADER -> FTYP FNAME ( VNAME , VNAME , VNAME )
-            1,  // FTYP -> num
-            1,  // FTYP -> void
-            6,  // BODY -> PROLOG LOCVARS ALGO EPILOG SUBFUNCS end
-            1,  // PROLOG -> {
-            1,  // EPILOG -> }
-            7,  // LOCVARS -> VTYP VNAME , VTYP VNAME , VTYP VNAME ,
-            1,  // SUBFUNCS -> FUNCTIONS
-            2   // COMMAND -> return ATOMIC
-        };
+            4,  // 0: PROG -> main GLOBVARS ALGO FUNCTIONS
+            0,  // 1: GLOBVARS -> ''
+            4,  // 2: GLOBVARS -> VTYP VNAME , GLOBVARS
+            1,  // 3: VTYP -> num
+            1,  // 4: VTYP -> text
+            1,  // 5: VNAME -> V
+            3,  // 6: ALGO -> begin INSTRUC end
+            0,  // 7: INSTRUC -> ''
+            3,  // 8: INSTRUC -> COMMAND ; INSTRUC
+            1,  // 9: COMMAND -> skip
+            1,  // 10: COMMAND -> halt
+            2,  // 11: COMMAND -> print ATOMIC
+            1,  // 12: COMMAND -> ASSIGN
+            1,  // 13: COMMAND -> CALL
+            1,  // 14: COMMAND -> BRANCH
+            1,  // 15: ATOMIC -> VNAME
+            1,  // 16: ATOMIC -> CONST
+            1,  // 17: CONST -> N
+            1,  // 18: CONST -> T
+            3,  // 19: ASSIGN -> VNAME < input
+            3,  // 20: ASSIGN -> VNAME = TERM
+            8,  // 21: CALL -> FNAME ( ATOMIC , ATOMIC , ATOMIC )
+            6,  // 22: BRANCH -> if COND then ALGO else ALGO
+            1,  // 23: TERM -> ATOMIC
+            1,  // 24: TERM -> CALL
+            1,  // 25: TERM -> OP
+            4,  // 26: OP -> UNOP ( ARG )
+            6,  // 27: OP -> BINOP ( ARG , ARG )
+            1,  // 28: ARG -> ATOMIC
+            1,  // 29: ARG -> OP
+            1,  // 30: COND -> SIMPLE
+            1,  // 31: COND -> COMPOSIT
+            6,  // 32: SIMPLE -> BINOP ( ATOMIC , ATOMIC )
+            6,  // 33: COMPOSIT -> BINOP ( SIMPLE , SIMPLE )
+            4,  // 34: COMPOSIT -> UNOP ( SIMPLE )
+            1,  // 35: UNOP -> not
+            1,  // 36: UNOP -> sqrt
+            1,  // 37: BINOP -> or
+            1,  // 38: BINOP -> and
+            1,  // 39: BINOP -> eq
+            1,  // 40: BINOP -> grt
+            1,  // 41: BINOP -> add
+            1,  // 42: BINOP -> sub
+            1,  // 43: BINOP -> mul
+            1,  // 44: BINOP -> div
+            1,  // 45: FNAME -> F
+            0,  // 46: FUNCTIONS -> ''
+            2,  // 47: FUNCTIONS -> DECL FUNCTIONS
+            2,  // 48: DECL -> HEADER BODY
+            9,  // 49: HEADER -> FTYP FNAME ( VNAME , VNAME , VNAME )
+            1,  // 50: FTYP -> num
+            1,  // 51: FTYP -> void
+            6,  // 52: BODY -> PROLOG LOCVARS ALGO EPILOG SUBFUNCS end
+            1,  // 53: PROLOG -> {
+            1,  // 54: EPILOG -> }
+            9,  // 55: LOCVARS -> VTYP VNAME , VTYP VNAME , VTYP VNAME ,
+            1,  // 56: SUBFUNCS -> FUNCTIONS
+            2   // 57: COMMAND -> return ATOMIC
+        };        
     
         // Ensure the productionNumber is within bounds
         if (productionNumber >= 0 && productionNumber < productionLengths.length) {
@@ -275,7 +283,8 @@ public class Parser {
     new Token(TokenClass.RESERVED_KEYWORD, ";", 35),                      // 35: End of the assignment statement
     new Token(TokenClass.RESERVED_KEYWORD, "end", 36),                    // 36: End of the second inner algorithm block
     new Token(TokenClass.RESERVED_KEYWORD, ";", 37),                      // 37: End of the conditional statement
-    new Token(TokenClass.RESERVED_KEYWORD, "end", 38)                     // 38: End of the algorithm (ALGO)
+    new Token(TokenClass.RESERVED_KEYWORD, "end", 38),                   // 38: End of the algorithm (ALGO)
+    new Token(TokenClass.END_OF_INPUT, "$", 39)                     // 38: End of the algorithm (ALGO)
 );
        
 
