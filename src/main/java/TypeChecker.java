@@ -1,10 +1,10 @@
-import java.util.HashMap;
-import java.util.Map;
+// import java.util.HashMap;
+// import java.util.Map;
 
-public class TypeChecker {
+// public class TypeChecker {
 
-    // Symbol table to store variable and function types
-    private Map<String, String> symbolTable = new HashMap<>();
+//     // Symbol table to store variable and function types
+//     private Map<String, String> symbolTable = new HashMap<>();
 
     // Entry point for type checking the entire AST
     public boolean checkProgram(ASTNode prog) {
