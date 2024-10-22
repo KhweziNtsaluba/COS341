@@ -8,10 +8,8 @@ public class TypeChecker {
 
     // Entry point for type checking the entire AST
     public boolean checkProgram(ASTNode prog) {
-        // Assuming the first child is GlobalVars, second is Algo, and third is
-        // Functions
-        if (prog.getChildren().size() < 3)
-            return false;
+        // Assuming the first child is GlobalVars, second is Algo, and third is Functions
+        if (prog.getChildren().size() < 3) return false;
 
         ASTNode globVars = prog.getChildren().get(0);
         ASTNode algo = prog.getChildren().get(1);
@@ -22,12 +20,21 @@ public class TypeChecker {
 
     // Type check for global variables
     private boolean checkGlobalVars(ASTNode globVars) {
-        if (globVars == null)
-            return true; // Base case
-        // Process each variable declaration (assuming they are children of globVars)
+        if (globVars == null) return true; // Base case
+
+        // Process each variable declaration
         for (ASTNode varDecl : globVars.getChildren()) {
+            if (varDecl.getChildren().size() < 2) {
+                System.out.println("Variable declaration does not have enough children.");
+                return false; // Should have at least type and name
+            }
             String varType = typeof(varDecl.getChildren().get(0)); // Assuming 1st child is type
-            String varName = varDecl.getValue(); // varDecl value stores the variable name
+            String varName = varDecl.getChildren().get(1).getValue(); // Assuming 2nd child is variable name
+
+            if (varType == null || varName == null) {
+                System.out.println("Error: Variable type or name is null.");
+                return false;
+            }
 
             symbolTable.put(varName, varType); // Store in symbol table
         }
@@ -81,8 +88,7 @@ public class TypeChecker {
                 String condType = typeof(instruc.getChildren().get(0)); // Condition node
                 if (!condType.equals("b"))
                     return false;
-                return checkAlgo(instruc.getChildren().get(1)) && checkAlgo(instruc.getChildren().get(2)); // Two
-                                                                                                           // branches
+                return checkAlgo(instruc.getChildren().get(1)) && checkAlgo(instruc.getChildren().get(2)); // Two branches
             }
 
             default:
@@ -131,10 +137,21 @@ public class TypeChecker {
 
     // Type checking for atomic values (variables, constants)
     private String typeof(ASTNode node) {
+        if (node == null) return null; // Handle null case
+
         String nodeType = node.getValue(); // Get the value representing the node type
+
+        if (nodeType == null) {
+            System.out.println("Warning: ASTNode value is null");
+            return null; // Added warning and return null if nodeType is null
+        }
 
         switch (nodeType) {
             case "Var":
+                if (node.getChildren().isEmpty()) {
+                    System.out.println("Error: Var node has no children.");
+                    return null; // Return null if no children are present
+                }
                 return symbolTable.get(node.getChildren().get(0).getValue()); // Variable name
             case "Const":
                 return typeofConst(node);
@@ -159,9 +176,8 @@ public class TypeChecker {
         // Create a GlobalVars node with a variable declaration
         ASTNode globalVars = new ASTNode("GlobalVars");
         ASTNode varDecl = new ASTNode("VarDecl"); // VarDecl -> type + name
-        ASTNode varType = new ASTNode("VarType");
+        ASTNode varType = new ASTNode("n"); // 'n' stands for numeric
         ASTNode varName = new ASTNode("myVar");
-        varType.addChild(new ASTNode("n")); // 'n' stands for numeric
         varDecl.addChild(varType); // Add type as first child
         varDecl.addChild(varName); // Add variable name as second child
         globalVars.addChild(varDecl); // Add var declaration to globalVars
@@ -174,8 +190,29 @@ public class TypeChecker {
         printInstr.addChild(printValue);
         algo.addChild(printInstr); // Add print instruction to algorithm
 
-        // Create a Functions node (empty for now)
+        // Create a Functions node with a function declaration
         ASTNode functions = new ASTNode("Functions");
+        ASTNode funcDecl = new ASTNode("FuncDecl"); // FuncDecl -> header + body
+        ASTNode funcHeader = new ASTNode("FuncHeader");
+        ASTNode returnType = new ASTNode("n"); // Return type is numeric
+        ASTNode funcNameNode = new ASTNode("myFunction");
+        ASTNode param = new ASTNode("n"); // Parameter type is numeric
+        funcHeader.addChild(returnType); // Add return type
+        funcHeader.addChild(funcNameNode); // Add function name
+        funcHeader.addChild(param); // Add parameter
+        funcDecl.addChild(funcHeader); // Add header to function declaration
+
+        ASTNode funcBody = new ASTNode("Algo"); // Function body as an algorithm
+        ASTNode assignInstr = new ASTNode("assign");
+        ASTNode assignVar = new ASTNode("Var");
+        assignVar.addChild(new ASTNode("myVar")); // Assigning to myVar
+        ASTNode assignValue = new ASTNode("Const");
+        assignValue.addChild(new ASTNode("N")); // Assigning a numeric constant
+        assignInstr.addChild(assignVar);
+        assignInstr.addChild(assignValue);
+        funcBody.addChild(assignInstr); // Add assign instruction to function body
+        funcDecl.addChild(funcBody); // Add body to function declaration
+        functions.addChild(funcDecl); // Add function declaration to functions
 
         // Build the program structure
         program.addChild(globalVars);
@@ -189,5 +226,4 @@ public class TypeChecker {
         // Output result
         System.out.println("Type checking passed: " + typeCheckPassed);
     }
-
 }
