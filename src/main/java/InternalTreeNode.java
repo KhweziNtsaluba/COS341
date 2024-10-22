@@ -24,8 +24,15 @@ public class InternalTreeNode implements ASTNode {
     public String toString() {
         StringBuilder sb = new StringBuilder(grammarVariable);
         if (!getChildren().isEmpty()) {
-            sb.append(" -> ").append(getChildren());
+            sb.append("\n");
+            for (ASTNode child : getChildren()) {
+                String childString = child.toString().replaceAll("(?m)^", "    "); // Indent child nodes
+                sb.append("├── ").append(childString).append("\n");
+            }
+            // Remove the last newline character
+            sb.setLength(sb.length() - 1);
         }
         return sb.toString();
     }
+
 }

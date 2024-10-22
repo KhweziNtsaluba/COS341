@@ -80,9 +80,20 @@ public class Parser {
     
                 case ACCEPT:
                     System.out.println("Input successfully parsed!");
+
+                    // reduce 0
+                    ASTNode rootNode = new InternalTreeNode(getNonTerminal(0));
+
+                    final int initialProductionLength = getProductionLength(0);
+                    for (int i = 0; i < initialProductionLength; i++) {
+                        rootNode.addChild(astStack.pop());
+                        stateStack.pop();
+                    }
+                    
+                    astStack.push(rootNode);
                     System.out.println("AST: " + astStack.peek());  // Print the final AST
-                    return true;
-    
+                    return true;   
+
                 case ERROR:
                 default:
                     System.out.println("Syntax error at token: " + currentToken);
