@@ -505,7 +505,6 @@ public class ParseTable {
                 break;
             }
         }
-        
         return actionTable.getOrDefault(state, new HashMap<>()).get(symbol);
     }
     
