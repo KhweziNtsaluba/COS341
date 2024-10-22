@@ -1,10 +1,10 @@
-// import java.util.HashMap;
-// import java.util.Map;
+import java.util.HashMap;
+import java.util.Map;
 
-// public class TypeChecker {
+public class TypeChecker {
 
-//     // Symbol table to store variable and function types
-//     private Map<String, String> symbolTable = new HashMap<>();
+    // Symbol table to store variable and function types
+    private Map<String, String> symbolTable = new HashMap<>();
 
     // Entry point for type checking the entire AST
     public boolean checkProgram(ASTNode prog) {
@@ -40,84 +40,90 @@
         return true;
     }
 
-    // Type check for algorithm (instructions)
-    private boolean checkAlgo(ASTNode algo) {
-        if (algo == null) return true; // Base case for nullable algo
+    // Type check for algorithm (ALGO ::= begin INSTRUC end)
+private boolean checkAlgo(ASTNode algo) {
+    if (algo == null || algo.getChildren().size() == 0) return false; // Algo must contain instructions
 
-        for (ASTNode instruc : algo.getChildren()) {
-            if (!checkInstruction(instruc))
-                return false;
+    ASTNode instruc = algo.getChildren().get(0); // ALGO has one child which is INSTRUC
+    return checkInstruction(instruc); // Typecheck(ALGO) = typecheck(INSTRUC)
+}
+
+// Type check for individual instructions (INSTRUC)
+private boolean checkInstruction(ASTNode instruc) {
+    if (instruc == null || instruc.getValue() == null) return false;
+
+    String commandType = instruc.getValue(); // Get the command type from instruction
+
+    switch (commandType) {
+        case "skip":
+        case "halt":
+            return true; // These commands are always valid
+
+        case "print": {
+            String type = typeof(instruc.getChildren().get(0)); // Atomic node being printed
+            return type.equals("n") || type.equals("t"); // Only numeric or text types can be printed
         }
-        return true;
-    }
 
-    // Type check for individual instructions
-    private boolean checkInstruction(ASTNode instruc) {
-        if (instruc == null || instruc.getValue() == null) return false;
-
-        String commandType = instruc.getValue(); // Instruction type as value
-
-        switch (commandType) {
-            case "skip":
-            case "halt":
-                return true;
-
-            case "print": {
-                String type = typeof(instruc.getChildren().get(0)); // Atomic node being printed
-                return type.equals("n") || type.equals("t");
-            }
-
-            case "return": {
-                String returnType = typeof(instruc.getChildren().get(0)); // Atomic node being returned
-                String funcType = "n"; // Placeholder for actual function return type
-                return returnType.equals(funcType);
-            }
-
-            case "assign": {
-                String varName = instruc.getChildren().get(0).getValue(); // Get the variable name
-                String termType = typeof(instruc.getChildren().get(1)); // Term node being assigned
-                String varType = symbolTable.get(varName);
-
-                return varType != null && varType.equals(termType);
-            }
-
-            case "call": {
-                String callType = typeof(instruc.getChildren().get(0)); // Call node
-                return callType.equals("v");
-            }
-
-            case "branch": {
-                String condType = typeof(instruc.getChildren().get(0)); // Condition node
-                if (!condType.equals("b"))
-                    return false;
-                return checkAlgo(instruc.getChildren().get(1)) && checkAlgo(instruc.getChildren().get(2)); // Two branches
-            }
-
-            default:
-                return false;
+        case "return": {
+            String returnType = typeof(instruc.getChildren().get(0)); // Atomic node being returned
+            String funcType = "n"; // Placeholder for actual function return type (e.g., numeric)
+            return returnType.equals(funcType);
         }
-    }
 
-    // Type check for functions
-    private boolean checkFunctions(ASTNode functions) {
-        if (functions == null) return true; // Base case for nullable functions
+        case "assign": {
+            String varName = instruc.getChildren().get(0).getValue(); // Variable name
+            String termType = typeof(instruc.getChildren().get(1)); // Term node being assigned to variable
+            String varType = symbolTable.get(varName); // Lookup variable type in symbol table
 
-        for (ASTNode functionDecl : functions.getChildren()) {
-            if (!checkFunction(functionDecl))
-                return false;
+            return varType != null && varType.equals(termType); // Ensure types match
         }
-        return true;
+
+        case "call": {
+            String callType = typeof(instruc.getChildren().get(0)); // Call node type
+            return callType.equals("v"); // Assume function call returns a valid type
+        }
+
+        case "branch": {
+            String condType = typeof(instruc.getChildren().get(0)); // Condition type
+            if (!condType.equals("b")) return false; // Condition must be boolean
+            // Recursively typecheck both branches (INSTRUC1 and INSTRUC2)
+            return checkInstruction(instruc.getChildren().get(1)) && checkInstruction(instruc.getChildren().get(2));
+        }
+
+        case "instruc": { 
+            // INSTRUC1 ::= COMMAND ; INSTRUC2 => typecheck(COMMAND) ^ typecheck(INSTRUC2)
+            ASTNode command = instruc.getChildren().get(0); // COMMAND
+            ASTNode nextInstruc = instruc.getChildren().get(1); // INSTRUC2
+
+            return checkInstruction(command) && checkInstruction(nextInstruc);
+        }
+
+        default:
+            return false; // Unrecognized command
     }
+}
 
-    // Type check for a single function declaration
-    private boolean checkFunction(ASTNode functionDecl) {
-        if (functionDecl == null || functionDecl.getChildren().size() < 2) return false;
+    // Type check for functions (FUNCTIONS ::=)
+private boolean checkFunctions(ASTNode functions) {
+    if (functions == null || functions.getChildren().size() == 0) return true; // Base case: no functions
 
-        ASTNode header = functionDecl.getChildren().get(0);
-        ASTNode body = functionDecl.getChildren().get(1);
+    // Typecheck(FUNCTIONS1) = typecheck(DECL) ^ typecheck(FUNCTIONS2)
+    ASTNode functionDecl = functions.getChildren().get(0); // First function declaration (DECL)
+    ASTNode remainingFunctions = functions.getChildren().size() > 1 ? functions.getChildren().get(1) : null; // Remaining FUNCTIONS2
 
-        return checkHeader(header) && checkBody(body);
-    }
+    return checkFunction(functionDecl) && checkFunctions(remainingFunctions); // Recursively check DECL and FUNCTIONS2
+}
+
+// Type check for a single function declaration (DECL)
+private boolean checkFunction(ASTNode functionDecl) {
+    if (functionDecl == null || functionDecl.getChildren().size() < 2) return false; // Function must have header and body
+
+    ASTNode header = functionDecl.getChildren().get(0); // Function header
+    ASTNode body = functionDecl.getChildren().get(1); // Function body
+
+    return checkHeader(header) && checkBody(body); // Type-check header and body
+}
+
 
     // Type check for function headers
     private boolean checkHeader(ASTNode header) {
@@ -197,7 +203,7 @@
 
         // Create ALGO ::= begin INSTRUC end
         ASTNode algo = new ASTNode("Algo");
-        ASTNode instruc = new ASTNode("Instruc");
+        ASTNode instruc = new ASTNode("skip");
 
         // Create COMMAND ::= print ATOMIC;
         ASTNode printCommand = new ASTNode("print");
