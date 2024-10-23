@@ -512,11 +512,62 @@ public class TypeChecker {
     
         return false; // Invalid argument types
     }
+
+    private boolean typecheckProlog(ASTNode prologNode) {
+        // Since PROLOG is a base-case and does not have additional checks
+        return true; 
+    }
     
-    // Placeholder for body type-checking
+    private boolean typecheckEpilog(ASTNode epilogNode) {
+        // Since EPILOG is a base-case and does not have additional checks
+        return true; 
+    }
+
+    private boolean typecheckLocvars(ASTNode locvarsNode) {
+        if (locvarsNode.getChildren().size() < 3) {
+            System.out.println("Error: Incomplete LOCVARS operation.");
+            return false; // Incomplete operation
+        }
+    
+        for (int i = 0; i < locvarsNode.getChildren().size(); i += 2) {
+            ASTNode vtypNode = locvarsNode.getChildren().get(i); // VTYP
+            ASTNode vnameNode = locvarsNode.getChildren().get(i + 1); // VNAME
+    
+            String t = typeof(vtypNode); // Get type of VTYP
+            String id = vnameNode.getValue(); // Get value of VNAME
+    
+            // Link type to the variable name in the symbol table
+            symbolTable.put(t, id);
+    
+            // Check if the variable name type matches the variable type
+            if (!t.equals(typeof(vnameNode))) {
+                System.out.println("Error: Type mismatch for variable " + id);
+                return false; // Type mismatch error
+            }
+        }
+    
+        return true; // All variables are correctly typed
+    }
+
+    private boolean typecheckSubfuncs(ASTNode subfuncsNode) {
+        return typecheckFunctions(subfuncsNode); // Assumes SUBFUNCS directly corresponds to FUNCTIONS
+    }
+    
+    
     private boolean typecheckBody(ASTNode bodyNode) {
-        // Implement body type-checking logic as necessary
-        return true; // Assuming body type checks pass
+        if (bodyNode.getChildren().size() < 5) {
+            System.out.println("Error: Incomplete BODY operation.");
+            return false; // Incomplete operation
+        }
+    
+        // Check all components of the BODY
+        boolean prologCheck = typecheckProlog(bodyNode.getChildren().get(0)); // PROLOG
+        boolean locvarsCheck = typecheckLocvars(bodyNode.getChildren().get(1)); // LOCVARS
+        boolean algoCheck = checkAlgo(bodyNode.getChildren().get(2)); // ALGO
+        boolean epilogCheck = typecheckEpilog(bodyNode.getChildren().get(3)); // EPILOG
+        boolean subfuncsCheck = typecheckSubfuncs(bodyNode.getChildren().get(4)); // SUBFUNCS
+    
+        return prologCheck && locvarsCheck && algoCheck && epilogCheck && subfuncsCheck;
     }
     
 
