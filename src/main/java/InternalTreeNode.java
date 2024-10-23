@@ -20,6 +20,10 @@ public class InternalTreeNode implements ASTNode {
         return this.children;
     }
 
+    public String getGrammarVariable(){
+        return grammarVariable;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(grammarVariable);

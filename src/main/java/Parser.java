@@ -14,7 +14,7 @@ public class Parser {
         stateStack.push(0);  // Start in state 0
     }
 
-    public boolean parse() {
+    public ASTNode parse() {
         int tokenIndex = 0;
     
         while (tokenIndex < tokens.size()) {
@@ -30,7 +30,7 @@ public class Parser {
     
             if (action == null) {
                 System.out.println("Syntax error at token: " + currentToken);
-                return false;  // Syntax error
+                return null;  // Syntax error
             }
     
             switch (action.getType()) {
@@ -49,15 +49,22 @@ public class Parser {
                     int productionLength = getProductionLength(action.getNumber());
                     if (astStack.size() < productionLength || stateStack.size() < productionLength) {
                         System.out.println("Syntax error: insufficient elements for reduction.");
-                        return false;  // Not enough elements to reduce
+                        return null;  // Not enough elements to reduce
                     }
                     
                     ASTNode parentNode = new InternalTreeNode(getNonTerminal(action.getNumber()));  // Create a new AST node
                     
                     // Pop the right number of AST nodes and add them as children of the parent node
+                    List<ASTNode> tempList = new ArrayList<>();
+
                     for (int i = 0; i < productionLength; i++) {
-                        parentNode.addChild(astStack.pop());
+                        tempList.add(astStack.pop());
                         stateStack.pop();
+                    }
+
+                    // Add nodes from the list to the parent node in the correct order
+                    for (int i = tempList.size() - 1; i >= 0; i--) {
+                        parentNode.addChild(tempList.get(i));
                     }
                     System.out.println("Reduced using production " + action.getNumber());
     
@@ -92,18 +99,18 @@ public class Parser {
                     
                     astStack.push(rootNode);
                     System.out.println("AST: " + astStack.peek());  // Print the final AST
-                    return true;   
+                    return rootNode;   
 
                 case ERROR:
                 default:
                     System.out.println("Syntax error at token: " + currentToken);
-                    return false;
+                    return null;
             }
             
         }
     
         System.out.println("Syntax error: Unexpected end of input.");
-        return false;
+        return null;
     }
     
     // Helper method to return the length of the production rule (this is based on your grammar)
@@ -252,54 +259,66 @@ public class Parser {
         }
     }
 
-    public static void main(String[] args) {
-        ParseTable table = new ParseTable();
+    // public static void main(String[] args) {
+    //     ParseTable table = new ParseTable();
         
-        List<Token> tokens = Arrays.asList(
-    new Token(TokenClass.RESERVED_KEYWORD, "main", 0),                   // 0: Start of the program
-    new Token(TokenClass.RESERVED_KEYWORD, "num", 1),                       // 1: Variable type for the first global variable (VTYP)
-    new Token(TokenClass.VARIABLE, "V_somevar", 2),                      // 2: First variable name (VNAME)
-    new Token(TokenClass.RESERVED_KEYWORD, ",", 3),                       // 3: Comma to separate variable declarations
-    new Token(TokenClass.RESERVED_KEYWORD, "text", 4),                      // 4: Variable type for the second global variable (VTYP)
-    new Token(TokenClass.VARIABLE, "V_hellothe", 5),                      // 5: Second variable name (VNAME)
-    new Token(TokenClass.RESERVED_KEYWORD, ",", 6),                       // 6: Comma to separate variable declarations
-    new Token(TokenClass.RESERVED_KEYWORD, "begin", 7),                   // 7: Start of the algorithm (ALGO)
-    new Token(TokenClass.VARIABLE, "V_var1", 8),                         // 8: Variable in assignment (VNAME)
-    new Token(TokenClass.RESERVED_KEYWORD, "=", 9),                       // 9: Assignment operator
-    new Token(TokenClass.NUMBER, "5", 10),                                // 10: Constant in assignment (CONST)
-    new Token(TokenClass.RESERVED_KEYWORD, ";", 11),                      // 11: End of the statement
-    new Token(TokenClass.RESERVED_KEYWORD, "if", 12),                     // 12: Start of a conditional statement (BRANCH)
-    new Token(TokenClass.RESERVED_KEYWORD, "grt", 13),                               // 13: Greater than operator (BINOP)
-    new Token(TokenClass.RESERVED_KEYWORD, "(", 14),                      // 14: Opening parenthesis for condition
-    new Token(TokenClass.VARIABLE, "V_var1", 15),                         // 15: Variable in condition (ATOMIC)
-    new Token(TokenClass.RESERVED_KEYWORD, ",", 16),                      // 16: Comma separating arguments
-    new Token(TokenClass.NUMBER, "10", 17),                               // 17: Constant in condition (CONST)
-    new Token(TokenClass.RESERVED_KEYWORD, ")", 18),                      // 18: Closing parenthesis for condition
-    new Token(TokenClass.RESERVED_KEYWORD, "then", 19),                   // 19: 'then' keyword in conditional
-    new Token(TokenClass.RESERVED_KEYWORD, "begin", 20),                  // 20: Start of the inner algorithm block
-    new Token(TokenClass.RESERVED_KEYWORD, "print", 21),                  // 21: Print command (COMMAND)
-    new Token(TokenClass.VARIABLE, "V_var1", 22),                         // 22: Variable being printed (ATOMIC)
-    new Token(TokenClass.RESERVED_KEYWORD, ";", 23),                      // 23: End of the print statement
-    new Token(TokenClass.RESERVED_KEYWORD, "end", 24),                    // 24: End of the inner algorithm block
-    new Token(TokenClass.RESERVED_KEYWORD, "else", 25),                   // 25: 'else' keyword in conditional
-    new Token(TokenClass.RESERVED_KEYWORD, "begin", 26),                  // 26: Start of the second inner algorithm block
-    new Token(TokenClass.VARIABLE, "V_var1", 27),                         // 27: Variable in assignment (VNAME)
-    new Token(TokenClass.RESERVED_KEYWORD, "=", 28),                      // 28: Assignment operator
-    new Token(TokenClass.RESERVED_KEYWORD, "add", 29),                            // 29: Function call (FUNCTION)
-    new Token(TokenClass.RESERVED_KEYWORD, "(", 30),                      // 30: Opening parenthesis for function arguments
-    new Token(TokenClass.VARIABLE, "V_var1", 31),                         // 31: First argument (ATOMIC)
-    new Token(TokenClass.RESERVED_KEYWORD, ",", 32),                      // 32: Comma separating arguments
-    new Token(TokenClass.NUMBER, "5", 33),                                // 33: Second argument (CONST)
-    new Token(TokenClass.RESERVED_KEYWORD, ")", 34),                      // 34: Closing parenthesis for function arguments
-    new Token(TokenClass.RESERVED_KEYWORD, ";", 35),                      // 35: End of the assignment statement
-    new Token(TokenClass.RESERVED_KEYWORD, "end", 36),                    // 36: End of the second inner algorithm block
-    new Token(TokenClass.RESERVED_KEYWORD, ";", 37),                      // 37: End of the conditional statement
-    new Token(TokenClass.RESERVED_KEYWORD, "end", 38),                   // 38: End of the algorithm (ALGO)
-    new Token(TokenClass.END_OF_INPUT, "$", 39)                     // 38: End of the algorithm (ALGO)
-);
+    //     List<Token> tokens = Arrays.asList(
+    //         new Token(TokenClass.RESERVED_KEYWORD, "main", 0),                   // 0: Start of the program
+    //         new Token(TokenClass.RESERVED_KEYWORD, "num", 1),                       // 1: Variable type for the first global variable (VTYP)
+    //         new Token(TokenClass.VARIABLE, "V_somevar", 2),                      // 2: First variable name (VNAME)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ",", 3),                       // 3: Comma to separate variable declarations
+    //         new Token(TokenClass.RESERVED_KEYWORD, "text", 4),                      // 4: Variable type for the second global variable (VTYP)
+    //         new Token(TokenClass.VARIABLE, "V_hellothe", 5),                      // 5: Second variable name (VNAME)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ",", 6),                       // 6: Comma to separate variable declarations
+    //         new Token(TokenClass.RESERVED_KEYWORD, "begin", 7),                   // 7: Start of the algorithm (ALGO)
+    //         new Token(TokenClass.VARIABLE, "V_var1", 8),                         // 8: Variable in assignment (VNAME)
+    //         new Token(TokenClass.RESERVED_KEYWORD, "=", 9),                       // 9: Assignment operator
+    //         new Token(TokenClass.NUMBER, "5", 10),                                // 10: Constant in assignment (CONST)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ";", 11),                      // 11: End of the statement
+    //         new Token(TokenClass.RESERVED_KEYWORD, "if", 12),                     // 12: Start of a conditional statement (BRANCH)
+    //         new Token(TokenClass.RESERVED_KEYWORD, "grt", 13),                               // 13: Greater than operator (BINOP)
+    //         new Token(TokenClass.RESERVED_KEYWORD, "(", 14),                      // 14: Opening parenthesis for condition
+    //         new Token(TokenClass.VARIABLE, "V_var1", 15),                         // 15: Variable in condition (ATOMIC)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ",", 16),                      // 16: Comma separating arguments
+    //         new Token(TokenClass.NUMBER, "10", 17),                               // 17: Constant in condition (CONST)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ")", 18),                      // 18: Closing parenthesis for condition
+    //         new Token(TokenClass.RESERVED_KEYWORD, "then", 19),                   // 19: 'then' keyword in conditional
+    //         new Token(TokenClass.RESERVED_KEYWORD, "begin", 20),                  // 20: Start of the inner algorithm block
+    //         new Token(TokenClass.RESERVED_KEYWORD, "print", 21),                  // 21: Print command (COMMAND)
+    //         new Token(TokenClass.VARIABLE, "V_var1", 22),                         // 22: Variable being printed (ATOMIC)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ";", 23),                      // 23: End of the print statement
+    //         new Token(TokenClass.RESERVED_KEYWORD, "end", 24),                    // 24: End of the inner algorithm block
+    //         new Token(TokenClass.RESERVED_KEYWORD, "else", 25),                   // 25: 'else' keyword in conditional
+    //         new Token(TokenClass.RESERVED_KEYWORD, "begin", 26),                  // 26: Start of the second inner algorithm block
+    //         new Token(TokenClass.VARIABLE, "V_var1", 27),                         // 27: Variable in assignment (VNAME)
+    //         new Token(TokenClass.RESERVED_KEYWORD, "=", 28),                      // 28: Assignment operator
+    //         new Token(TokenClass.RESERVED_KEYWORD, "add", 29),                            // 29: Function call (FUNCTION)
+    //         new Token(TokenClass.RESERVED_KEYWORD, "(", 30),                      // 30: Opening parenthesis for function arguments
+    //         new Token(TokenClass.VARIABLE, "V_var1", 31),                         // 31: First argument (ATOMIC)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ",", 32),                      // 32: Comma separating arguments
+    //         new Token(TokenClass.NUMBER, "5", 33),                                // 33: Second argument (CONST)
+    //         new Token(TokenClass.RESERVED_KEYWORD, ")", 34),                      // 34: Closing parenthesis for function arguments
+    //         new Token(TokenClass.RESERVED_KEYWORD, ";", 35),                      // 35: End of the assignment statement
+    //         new Token(TokenClass.RESERVED_KEYWORD, "end", 36),                    // 36: End of the second inner algorithm block
+    //         new Token(TokenClass.RESERVED_KEYWORD, ";", 37),                      // 37: End of the conditional statement
+    //         new Token(TokenClass.RESERVED_KEYWORD, "end", 38),                   // 38: End of the algorithm (ALGO)
+    //         new Token(TokenClass.END_OF_INPUT, "$", 39)                     // 38: End of the algorithm (ALGO)
+    //     );
        
 
-        Parser parser = new Parser(table, tokens);
-        parser.parse();
-    }
+    //     Parser parser = new Parser(table, tokens);
+        
+
+    //     // create symbol table
+    //     ASTNode parseTree = parser.parse();
+    //     ScopeAnalyser scopeAnalyser = new ScopeAnalyser();
+    //     if(parseTree != null){
+    //         try {
+    //             scopeAnalyser.crawl(parseTree);
+    //         } catch (Exception e) {
+    //             // TODO Auto-generated catch block
+    //             e.printStackTrace();
+    //         }
+    //     }
+    // }
 }

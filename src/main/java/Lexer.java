@@ -106,7 +106,7 @@ public class Lexer {
 
     }
 
-    private static String[] KEYWORDS = {
+    public static String[] KEYWORDS = {
         "main",                         // Program
         "num", "text",                  // variable type
         "begin", "end",                 // algo
