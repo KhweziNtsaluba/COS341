@@ -105,12 +105,60 @@ public class TypeChecker {
                 return checkInstruction(instruc.getChildren().get(1)) && checkInstruction(instruc.getChildren().get(2));
             }
     
+            case "return": {
+                // Get the function scope node (FTYP) in the tree where this return belongs
+                ASTNode functionScope = findFunctionScope(instruc);
+                if (functionScope == null) {
+                    System.out.println("Error: 'return' must be inside a function scope.");
+                    return false;
+                }
+    
+                String expectedReturnType = typeof(functionScope); // The type of the function
+                String actualReturnType = typeof(instruc.getChildren().get(0)); // The type of the returned atomic value
+    
+                if (!expectedReturnType.equals("n")) {
+                    System.out.println("Error: Functions can only return numeric values.");
+                    return false;
+                }
+    
+                if (!expectedReturnType.equals(actualReturnType)) {
+                    System.out.println("Error: Return type mismatch, expected " + expectedReturnType + " but got " + actualReturnType);
+                    return false;
+                }
+                return true;
+            }
+    
+            case "CALL": {
+                String callType = typeof(instruc.getChildren().get(0)); // Assuming CALL refers to a function call
+                if (!callType.equals("v")) { // 'v' stands for void-type
+                    System.out.println("Error: CALL must return a void type.");
+                    return false;
+                }
+                return true;
+            }
+    
             default:
                 System.out.println("Error: Unrecognized command " + commandType);
                 return false;
         }
-    }    
-
+    }
+    
+    /**
+     * This method simulates a "tree crawler" that finds the function type node (FTYP)
+     * in which the given `instruc` (return statement) is located. Assumes scope analysis was done.
+     */
+    private ASTNode findFunctionScope(ASTNode instruc) {
+        // Traverse upwards in the tree to find the function scope node (FTYP)
+        ASTNode current = instruc.getParent(); // Assuming each node has a parent reference
+        while (current != null) {
+            if ("FTYP".equals(current.getValue())) {
+                return current;
+            }
+            current = current.getParent();
+        }
+        return null; // If no function scope was found
+    }
+    
     private boolean checkFunctions(ASTNode functions) {
         if (functions == null || functions.getChildren().isEmpty())
             return true;

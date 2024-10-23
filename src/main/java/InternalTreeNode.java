@@ -4,6 +4,7 @@ import java.util.List;
 public class InternalTreeNode implements ASTNode {
     private String grammarVariable; // Name of the grammar variable (non-terminal)
     private List<ASTNode> children;
+    private ASTNode parent;
 
     public InternalTreeNode(String grammarVariable) {
         this.children = new ArrayList<>();
@@ -13,6 +14,7 @@ public class InternalTreeNode implements ASTNode {
     @Override
     public void addChild(ASTNode child) {
         children.add(child);
+        child.setParent(this);
     }
 
     @Override
@@ -23,6 +25,17 @@ public class InternalTreeNode implements ASTNode {
     @Override
     public String getValue() {
         return grammarVariable;
+    }
+
+    
+    @Override
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    @Override
+    public ASTNode getParent() {
+       return this.parent;
     }
 
     @Override

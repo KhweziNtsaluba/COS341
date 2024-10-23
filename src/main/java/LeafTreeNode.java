@@ -2,6 +2,7 @@ import java.util.List;
 
 public class LeafTreeNode implements ASTNode {
     private Token token;  // Leaf nodes contain a Token
+    private ASTNode parent;
 
     public LeafTreeNode(Token token) {
         super();
@@ -26,6 +27,16 @@ public class LeafTreeNode implements ASTNode {
     public void addChild(ASTNode child) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'addChild'");
+    }
+
+    @Override
+    public void setParent(ASTNode parent) {
+        this.parent = parent;
+    }
+
+    @Override
+    public ASTNode getParent() {
+       return this.parent;
     }
 
     @Override
