@@ -7,6 +7,7 @@ public class LeafTreeNode implements ASTNode {
     public LeafTreeNode(Token token) {
         super();
         this.token = token;
+        this.parent = null;
     }
 
     public Token getToken() {

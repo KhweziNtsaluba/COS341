@@ -9,6 +9,7 @@ public class InternalTreeNode implements ASTNode {
     public InternalTreeNode(String grammarVariable) {
         this.children = new ArrayList<>();
         this.grammarVariable = grammarVariable;
+        this.parent = null;
     }
 
     @Override

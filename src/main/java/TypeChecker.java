@@ -79,21 +79,47 @@ public class TypeChecker {
             }
     
             case "ASSIGN": {
-                String varName = instruc.getChildren().get(0).getValue();
-                String termType = typeof(instruc.getChildren().get(1)); // Get type of assigned term
-                String varType = symbolTable.get(varName); // Check variable type from symbol table
-    
-                if (varType == null) {
-                    System.out.println("Error: Variable " + varName + " not declared.");
-                    return false;
+                String varName = instruc.getChildren().get(0).getValue(); // Variable name
+                String assignmentType = instruc.getChildren().get(1).getValue(); // Type of assignment (input or TERM)
+            
+                // Check if it's a user input assignment
+                if (assignmentType.equals("<")) {
+                    // Assuming we have some mechanism to check for numeric user inputs
+                    String varType = symbolTable.get(varName); // Get variable type from symbol table
+            
+                    if (varType == null) {
+                        System.out.println("Error: Variable " + varName + " not declared.");
+                        return false;
+                    }
+            
+                    // Check if the variable is numeric
+                    if (varType.equals("n")) {
+                        // Numeric user input is allowed
+                        return true; // typecheck(ASSIGN) = true
+                    } else {
+                        // If variable is not numeric
+                        System.out.println("Error: Variable " + varName + " must be numeric for user input.");
+                        return false; // typecheck(ASSIGN) = false
+                    }
+                } else {
+                    // Handle assignment of a TERM (which can be either text or numbers)
+                    String termType = typeof(instruc.getChildren().get(1)); // Get type of the assigned term
+                    String varType = symbolTable.get(varName); // Check variable type from symbol table
+            
+                    if (varType == null) {
+                        System.out.println("Error: Variable " + varName + " not declared.");
+                        return false; // Variable not declared
+                    }
+            
+                    if (!varType.equals(termType)) {
+                        System.out.println("Error: Type mismatch in assignment to " + varName);
+                        return false; // Type mismatch
+                    }
+            
+                    return true; // typecheck(ASSIGN) = true
                 }
-    
-                if (!varType.equals(termType)) {
-                    System.out.println("Error: Type mismatch in assignment to " + varName);
-                    return false;
-                }
-                return true;
             }
+            
     
             case "branch": {
                 String condType = typeof(instruc.getChildren().get(0)); // Condition must be checked
@@ -129,7 +155,7 @@ public class TypeChecker {
             }
     
             case "CALL": {
-                String callType = typeof(instruc.getChildren().get(0)); // Assuming CALL refers to a function call
+                String callType = typeofCall(instruc.getChildren().get(0)); // Assuming CALL refers to a function call
                 if (!callType.equals("v")) { // 'v' stands for void-type
                     System.out.println("Error: CALL must return a void type.");
                     return false;
@@ -230,15 +256,28 @@ public class TypeChecker {
             // Use the token class to determine the type
             switch (token.getTokenClass()) {
                 case VARIABLE:
-                    return symbolTable.get(token.getTokenWord()); // Look up the variable type
+                    // Retrieve variable type from symbol table
+                    String varType = symbolTable.get(token.getTokenWord());
+                    if (varType == null) {
+                        System.out.println("Error: Variable " + token.getTokenWord() + " is not declared.");
+                        return null;
+                    }
+                    return varType; // Return the variable's type from the symbol table
+    
                 case NUMBER:
                     return "n"; // Numeric type
+    
                 case RESERVED_KEYWORD:
                     return switch (token.getTokenWord()) {
                         case "num" -> "n"; // Numeric type
                         case "text" -> "t"; // Text type
-                        default -> null; // For unrecognized reserved keywords
+                        default -> null; // Unrecognized reserved keywords
                     };
+    
+                case CONST:
+                    // Handle constants as numeric or text
+                    return typeofConst(token.getTokenWord());
+    
                 default:
                     System.out.println("Warning: Unrecognized token class " + token.getTokenClass());
                     return null;
@@ -246,17 +285,17 @@ public class TypeChecker {
         }
     
         String nodeType = node.getValue();
-    
         if (nodeType == null) {
             System.out.println("Warning: Node has no value.");
             return null;
         }
     
+        // Handle complex nodes such as binary operations, function calls, etc.
         switch (nodeType) {
             case "Var":
-                return symbolTable.get(node.getChildren().get(0).getValue()); // Look up the variable type
+                return symbolTable.get(node.getChildren().get(0).getValue()); // Look up the variable type from symbol table
             case "Const":
-                return typeofConst(node.getChildren().get(0).getValue());
+                return typeofConst(node.getChildren().get(0).getValue()); // Handle constant values
             case "true":
             case "false":
                 return "b"; // Boolean literal
@@ -264,13 +303,25 @@ public class TypeChecker {
             case "factor":
                 return typeof(node.getChildren().get(0)); // Recursive call for the child
             case "BINOP":
-                return typeofBinop(node); // Handle binary operators
+                return typeofBinop(node); // Handle binary operations
             default:
                 System.out.println("Warning: Unrecognized type " + nodeType);
                 return null;
         }
     }
     
+    private String typeofConst(String value) {
+        // Determine type based on the value pattern
+        if (value.matches("[0-9]+")) {
+            return "n"; // Numeric constant
+        } else if (value.matches("\".*\"")) {
+            return "t"; // Text constant (assuming text is enclosed in quotes)
+        } else {
+            System.out.println("Warning: Unrecognized constant value " + value);
+            return null;
+        }
+    }
+        
     private String typeofBinop(ASTNode node) {
         if (node == null || node.getChildren().isEmpty()) {
             System.out.println("Warning: BINOP node is null or has no children.");
@@ -290,14 +341,43 @@ public class TypeChecker {
             }
         };
     }
+
+    private String typeofCall(ASTNode node) {
+        // Assuming the CALL node has the structure CALL ::= FNAME( ATOMIC1, ATOMIC2, ATOMIC3 )
+        
+        if (node.getChildren().size() < 2) {
+            return "u"; // Undefined if no parameters are passed
+        }
+    
+        String funcName = node.getChildren().get(0).getValue(); // Get the function name
+        ASTNode params = node.getChildren().get(1); // Get the parameters node
+    
+        // Validate the number of parameters
+        if (params.getChildren().size() != 3) {
+            return "u"; // Undefined if not exactly three parameters
+        }
+    
+        // Get the types of the parameters
+        String type1 = typeof(params.getChildren().get(0)); // ATOMIC1
+        String type2 = typeof(params.getChildren().get(1)); // ATOMIC2
+        String type3 = typeof(params.getChildren().get(2)); // ATOMIC3
+    
+        // Check if all three parameters are numeric
+        boolean allNumeric = type1.equals("n") && type2.equals("n") && type3.equals("n");
+    
+        if (allNumeric) {
+            // Consult the symbol table for the function's return type
+            String returnType = symbolTable.get(funcName); // Assuming this returns the expected return type of the function
+            if (returnType != null) {
+                return returnType; // Return the type of the function
+            }
+        }
+    
+        return "u"; // Return 'u' if not all parameters are numeric or function not found
+    }
+    
     
             
-    private String typeofConst(String value) {
-        if (value.matches("[0-9]+"))
-            return "n";
-        else
-            return "t";
-    }
 
     public static void main(String[] args) {
         // Global variables declaration: num V_somevar, text V_hellothe
