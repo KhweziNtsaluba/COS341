@@ -445,6 +445,81 @@ public class TypeChecker {
         return false; // If operation type is not recognized
     }
 
+    private boolean typecheckFunctions(ASTNode functionsNode) {
+        if (functionsNode == null) {
+            return true; // Base case of the type-checking recursion
+        }
+    
+        for (ASTNode function : functionsNode.getChildren()) {
+            if (!typecheckFunctions1(function)) {
+                return false; // If any function fails type check, return false
+            }
+        }
+        return true; // All functions passed type check
+    }
+    
+    private boolean typecheckFunctions1(ASTNode functions1Node) {
+        if (functions1Node.getChildren().size() < 2) {
+            System.out.println("Error: Incomplete FUNCTIONS1 operation.");
+            return false; // Incomplete operation
+        }
+    
+        ASTNode declNode = functions1Node.getChildren().get(0); // DECL node
+        ASTNode functions2Node = functions1Node.getChildren().get(1); // FUNCTIONS2 node
+    
+        return typecheckDecl(declNode) && typecheckFunctions(functions2Node);
+    }
+    
+    private boolean typecheckDecl(ASTNode declNode) {
+        if (declNode.getChildren().size() < 2) {
+            System.out.println("Error: Incomplete DECL operation.");
+            return false; // Incomplete operation
+        }
+    
+        ASTNode headerNode = declNode.getChildren().get(0); // HEADER node
+        ASTNode bodyNode = declNode.getChildren().get(1); // BODY node
+    
+        return typecheckHeader(headerNode) && typecheckBody(bodyNode);
+    }
+    
+    private boolean typecheckHeader(ASTNode headerNode) {
+        if (headerNode.getChildren().size() < 4) {
+            System.out.println("Error: Incomplete HEADER operation.");
+            return false; // Incomplete operation
+        }
+    
+        String ftyp = typeof(headerNode.getChildren().get(0)); // FTYP
+        ASTNode fnameNode = headerNode.getChildren().get(1); // FNAME as ASTNode
+        String vname1Type = typeof(headerNode.getChildren().get(2)); // VNAME1
+        String vname2Type = typeof(headerNode.getChildren().get(3)); // VNAME2
+    
+        // Accessing the function name's type
+        String fnameType = typeof(fnameNode); // Get the type of FNAME from the ASTNode
+    
+        // Add to symbol table
+        symbolTable.put(ftyp, fnameNode.getValue()); // Link the function type to the function name
+    
+        // Check function return type against header type
+        if (!ftyp.equals(fnameType)) {
+            System.out.println("Error: Function return type does not match header type.");
+            return false;
+        }
+    
+        // Check if all variable names are of numeric type
+        if (vname1Type.equals("n") && vname2Type.equals("n")) {
+            return true; // Valid numeric arguments
+        }
+    
+        return false; // Invalid argument types
+    }
+    
+    // Placeholder for body type-checking
+    private boolean typecheckBody(ASTNode bodyNode) {
+        // Implement body type-checking logic as necessary
+        return true; // Assuming body type checks pass
+    }
+    
+
     public static void main(String[] args) {
         // Global variables declaration: num V_somevar, text V_hellothe
         InternalTreeNode globVars = new InternalTreeNode("GLOBVARS");
