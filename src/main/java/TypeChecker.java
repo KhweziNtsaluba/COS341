@@ -61,14 +61,14 @@ public class TypeChecker {
             System.out.println("Error: Invalid instruction.");
             return false;
         }
-    
+
         String commandType = instruc.getValue();
-    
+
         switch (commandType) {
             case "skip":
             case "halt":
                 return true;
-    
+
             case "print": {
                 String termType = typeof(instruc.getChildren().get(0));
                 if (!termType.equals("n") && !termType.equals("t")) {
@@ -77,21 +77,21 @@ public class TypeChecker {
                 }
                 return true;
             }
-    
+
             case "ASSIGN": {
                 String varName = instruc.getChildren().get(0).getValue(); // Variable name
                 String assignmentType = instruc.getChildren().get(1).getValue(); // Type of assignment (input or TERM)
-            
+
                 // Check if it's a user input assignment
                 if (assignmentType.equals("<")) {
                     // Assuming we have some mechanism to check for numeric user inputs
                     String varType = symbolTable.get(varName); // Get variable type from symbol table
-            
+
                     if (varType == null) {
                         System.out.println("Error: Variable " + varName + " not declared.");
                         return false;
                     }
-            
+
                     // Check if the variable is numeric
                     if (varType.equals("n")) {
                         // Numeric user input is allowed
@@ -105,32 +105,31 @@ public class TypeChecker {
                     // Handle assignment of a TERM (which can be either text or numbers)
                     String termType = typeof(instruc.getChildren().get(1)); // Get type of the assigned term
                     String varType = symbolTable.get(varName); // Check variable type from symbol table
-            
+
                     if (varType == null) {
                         System.out.println("Error: Variable " + varName + " not declared.");
                         return false; // Variable not declared
                     }
-            
+
                     if (!varType.equals(termType)) {
                         System.out.println("Error: Type mismatch in assignment to " + varName);
                         return false; // Type mismatch
                     }
-            
+
                     return true; // typecheck(ASSIGN) = true
                 }
             }
-            
-    
+
             case "branch": {
                 String condType = typeof(instruc.getChildren().get(0)); // Condition must be checked
                 if (!condType.equals("b")) {
                     System.out.println("Error: Condition must be boolean.");
                     return false;
                 }
-    
+
                 return checkInstruction(instruc.getChildren().get(1)) && checkInstruction(instruc.getChildren().get(2));
             }
-    
+
             case "return": {
                 // Get the function scope node (FTYP) in the tree where this return belongs
                 ASTNode functionScope = findFunctionScope(instruc);
@@ -138,22 +137,23 @@ public class TypeChecker {
                     System.out.println("Error: 'return' must be inside a function scope.");
                     return false;
                 }
-    
+
                 String expectedReturnType = typeof(functionScope); // The type of the function
                 String actualReturnType = typeof(instruc.getChildren().get(0)); // The type of the returned atomic value
-    
+
                 if (!expectedReturnType.equals("n")) {
                     System.out.println("Error: Functions can only return numeric values.");
                     return false;
                 }
-    
+
                 if (!expectedReturnType.equals(actualReturnType)) {
-                    System.out.println("Error: Return type mismatch, expected " + expectedReturnType + " but got " + actualReturnType);
+                    System.out.println("Error: Return type mismatch, expected " + expectedReturnType + " but got "
+                            + actualReturnType);
                     return false;
                 }
                 return true;
             }
-    
+
             case "CALL": {
                 String callType = typeofCall(instruc.getChildren().get(0)); // Assuming CALL refers to a function call
                 if (!callType.equals("v")) { // 'v' stands for void-type
@@ -162,16 +162,18 @@ public class TypeChecker {
                 }
                 return true;
             }
-    
+
             default:
                 System.out.println("Error: Unrecognized command " + commandType);
                 return false;
         }
     }
-    
+
     /**
-     * This method simulates a "tree crawler" that finds the function type node (FTYP)
-     * in which the given `instruc` (return statement) is located. Assumes scope analysis was done.
+     * This method simulates a "tree crawler" that finds the function type node
+     * (FTYP)
+     * in which the given `instruc` (return statement) is located. Assumes scope
+     * analysis was done.
      */
     private ASTNode findFunctionScope(ASTNode instruc) {
         // Traverse upwards in the tree to find the function scope node (FTYP)
@@ -184,7 +186,7 @@ public class TypeChecker {
         }
         return null; // If no function scope was found
     }
-    
+
     private boolean checkFunctions(ASTNode functions) {
         if (functions == null || functions.getChildren().isEmpty())
             return true;
@@ -244,7 +246,7 @@ public class TypeChecker {
             System.out.println("Warning: Node is null.");
             return null;
         }
-    
+
         // Check if the node is a LeafNode
         if (node instanceof LeafTreeNode) {
             Token token = ((LeafTreeNode) node).getToken(); // Assuming LeafTreeNode has a getToken method
@@ -252,7 +254,7 @@ public class TypeChecker {
                 System.out.println("Warning: Leaf node has no token.");
                 return null;
             }
-    
+
             // Use the token class to determine the type
             switch (token.getTokenClass()) {
                 case VARIABLE:
@@ -263,37 +265,38 @@ public class TypeChecker {
                         return null;
                     }
                     return varType; // Return the variable's type from the symbol table
-    
+
                 case NUMBER:
                     return "n"; // Numeric type
-    
+
                 case RESERVED_KEYWORD:
                     return switch (token.getTokenWord()) {
                         case "num" -> "n"; // Numeric type
                         case "text" -> "t"; // Text type
                         default -> null; // Unrecognized reserved keywords
                     };
-    
+
                 case CONST:
                     // Handle constants as numeric or text
                     return typeofConst(token.getTokenWord());
-    
+
                 default:
                     System.out.println("Warning: Unrecognized token class " + token.getTokenClass());
                     return null;
             }
         }
-    
+
         String nodeType = node.getValue();
         if (nodeType == null) {
             System.out.println("Warning: Node has no value.");
             return null;
         }
-    
+
         // Handle complex nodes such as binary operations, function calls, etc.
         switch (nodeType) {
             case "Var":
-                return symbolTable.get(node.getChildren().get(0).getValue()); // Look up the variable type from symbol table
+                return symbolTable.get(node.getChildren().get(0).getValue()); // Look up the variable type from symbol
+                                                                              // table
             case "Const":
                 return typeofConst(node.getChildren().get(0).getValue()); // Handle constant values
             case "true":
@@ -309,7 +312,7 @@ public class TypeChecker {
                 return null;
         }
     }
-    
+
     private String typeofConst(String value) {
         // Determine type based on the value pattern
         if (value.matches("[0-9]+")) {
@@ -321,16 +324,16 @@ public class TypeChecker {
             return null;
         }
     }
-        
+
     private String typeofBinop(ASTNode node) {
         if (node == null || node.getChildren().isEmpty()) {
             System.out.println("Warning: BINOP node is null or has no children.");
             return null;
         }
-    
+
         // Assuming the first child is the operation token
         String operation = node.getChildren().get(0).getValue(); // Get the operation type
-    
+
         return switch (operation) {
             case "or", "and" -> "b"; // Boolean type
             case "eq", "grt" -> "c"; // Comparison type
@@ -343,76 +346,139 @@ public class TypeChecker {
     }
 
     private String typeofCall(ASTNode node) {
-        // Assuming the CALL node has the structure CALL ::= FNAME( ATOMIC1, ATOMIC2, ATOMIC3 )
-        
+        // Assuming the CALL node has the structure CALL ::= FNAME( ATOMIC1, ATOMIC2,
+        // ATOMIC3 )
+
         if (node.getChildren().size() < 2) {
             return "u"; // Undefined if no parameters are passed
         }
-    
+
         String funcName = node.getChildren().get(0).getValue(); // Get the function name
         ASTNode params = node.getChildren().get(1); // Get the parameters node
-    
+
         // Validate the number of parameters
         if (params.getChildren().size() != 3) {
             return "u"; // Undefined if not exactly three parameters
         }
-    
+
         // Get the types of the parameters
         String type1 = typeof(params.getChildren().get(0)); // ATOMIC1
         String type2 = typeof(params.getChildren().get(1)); // ATOMIC2
         String type3 = typeof(params.getChildren().get(2)); // ATOMIC3
-    
+
         // Check if all three parameters are numeric
         boolean allNumeric = type1.equals("n") && type2.equals("n") && type3.equals("n");
-    
+
         if (allNumeric) {
             // Consult the symbol table for the function's return type
-            String returnType = symbolTable.get(funcName); // Assuming this returns the expected return type of the function
+            String returnType = symbolTable.get(funcName); // Assuming this returns the expected return type of the
+                                                           // function
             if (returnType != null) {
                 return returnType; // Return the type of the function
             }
         }
-    
+
         return "u"; // Return 'u' if not all parameters are numeric or function not found
     }
-    
-    
-            
+
+    private boolean checkOp(ASTNode opNode) {
+        if (opNode == null || opNode.getChildren().isEmpty()) {
+            System.out.println("Error: Incomplete operation.");
+            return false;
+        }
+
+        String operationType = opNode.getChildren().get(0).getValue(); // The type of operation (UNOP/BINOP)
+        String argType = typeof(opNode.getChildren().get(1)); // The type of the argument (for unary operations)
+
+        // Handling UNOP
+        if (operationType.equals("UNOP")) {
+            String unop = opNode.getChildren().get(0).getValue(); // Get the actual unary operation
+
+            // Determine the argument type
+            String arg = typeof(opNode.getChildren().get(1));
+
+            // Check the argument type based on the unary operation
+            switch (unop) {
+                case "not":
+                    if (arg.equals("b")) {
+                        // Both UNOP and ARG are boolean
+                        return true; // Operation type is boolean
+                    } else {
+                        System.out.println("Error: Argument for 'not' must be boolean.");
+                        return false;
+                    }
+
+                case "sqrt":
+                    if (arg.equals("n")) {
+                        // Both UNOP and ARG are numeric
+                        return true; // Operation type is numeric
+                    } else {
+                        System.out.println("Error: Argument for 'sqrt' must be numeric.");
+                        return false;
+                    }
+
+                default:
+                    System.out.println("Error: Unrecognized unary operation " + unop);
+                    return false;
+            }
+        }
+
+        // Handling BINOP
+        else if (operationType.equals("BINOP")) {
+            // Assuming we have two arguments for binary operations
+            String arg1Type = typeof(opNode.getChildren().get(1));
+            String arg2Type = typeof(opNode.getChildren().get(2));
+
+            if (arg1Type.equals("b") && arg2Type.equals("b")) {
+                return true; // Both arguments are boolean
+            } else if (arg1Type.equals("n") && arg2Type.equals("n")) {
+                return true; // Both arguments are numeric
+            } else if (arg1Type.equals("n") && arg2Type.equals("n")) {
+                return true; // Comparison operation
+            } else {
+                System.out.println("Error: Incompatible argument types for binary operation.");
+                return false;
+            }
+        }
+
+        System.out.println("Error: Unrecognized operation type " + operationType);
+        return false; // If operation type is not recognized
+    }
 
     public static void main(String[] args) {
         // Global variables declaration: num V_somevar, text V_hellothe
         InternalTreeNode globVars = new InternalTreeNode("GLOBVARS");
-    
+
         // Variable Declaration: num V_somevar
         InternalTreeNode varDecl1 = new InternalTreeNode("VarDecl");
         varDecl1.addChild(new LeafTreeNode(new Token(TokenClass.RESERVED_KEYWORD, "num"))); // Type: num
         varDecl1.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "V_somevar"))); // Variable: V_somevar
-    
+
         // Variable Declaration: text V_hellothe
         InternalTreeNode varDecl2 = new InternalTreeNode("VarDecl");
         varDecl2.addChild(new LeafTreeNode(new Token(TokenClass.RESERVED_KEYWORD, "text"))); // Type: text
         varDecl2.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "V_hellothe"))); // Variable: V_hellothe
-    
+
         // Adding variable declarations to global variables
         globVars.addChild(varDecl1);
         globVars.addChild(varDecl2);
-    
+
         // Variable Declaration: num V_var1 (added for correctness)
         InternalTreeNode varDecl3 = new InternalTreeNode("VarDecl");
         varDecl3.addChild(new LeafTreeNode(new Token(TokenClass.RESERVED_KEYWORD, "num"))); // Type: num
         varDecl3.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "V_var1"))); // Variable: V_var1
-    
+
         globVars.addChild(varDecl3); // Add V_var1 declaration to global variables
-    
+
         // Algorithm section
         InternalTreeNode algo = new InternalTreeNode("ALGO");
-    
+
         // V_var1 = 5;
         InternalTreeNode assignInstruc1 = new InternalTreeNode("ASSIGN");
         assignInstruc1.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "V_var1"))); // Variable: V_var1
         assignInstruc1.addChild(new LeafTreeNode(new Token(TokenClass.NUMBER, "5"))); // Constant: 5
         algo.addChild(assignInstruc1);
-    
+
         // if grt(V_var1 , 10) then
         InternalTreeNode ifStmt = new InternalTreeNode("COMMAND");
         ifStmt.addChild(new LeafTreeNode(new Token(TokenClass.RESERVED_KEYWORD, "if"))); // if
@@ -423,14 +489,14 @@ public class TypeChecker {
         simpleCondition.addChild(new LeafTreeNode(new Token(TokenClass.BINOP, "grt"))); // grt
         condition.addChild(simpleCondition);
         ifStmt.addChild(condition);
-    
+
         // then block
         InternalTreeNode thenBlock = new InternalTreeNode("begin");
         InternalTreeNode printStmt = new InternalTreeNode("print");
         printStmt.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "V_var1"))); // Variable: V_var1
         thenBlock.addChild(printStmt);
         ifStmt.addChild(thenBlock);
-    
+
         // else block
         InternalTreeNode elseBlock = new InternalTreeNode("begin");
         InternalTreeNode assignInstruc2 = new InternalTreeNode("ASSIGN");
@@ -440,27 +506,27 @@ public class TypeChecker {
         addFunc.addChild(new LeafTreeNode(new Token(TokenClass.NUMBER, "5"))); // 5
         assignInstruc2.addChild(addFunc);
         elseBlock.addChild(assignInstruc2);
-        
+
         ifStmt.addChild(elseBlock);
-    
+
         // Add if statement to the algorithm
         algo.addChild(ifStmt);
-    
+
         // Functions section (empty for now)
         InternalTreeNode functions = new InternalTreeNode("FUNCTIONS");
-    
+
         // Create the full program node
         InternalTreeNode program = new InternalTreeNode("PROG");
         program.addChild(globVars); // Global variables
         program.addChild(algo); // Algorithm
         program.addChild(functions); // Functions
-    
+
         // TypeChecker instance
         TypeChecker typeChecker = new TypeChecker();
-    
+
         // Run the type checker on the AST
         boolean result = typeChecker.checkProgram(program);
-    
+
         // Output result
         if (result) {
             System.out.println("Type checking passed successfully!");
@@ -468,5 +534,5 @@ public class TypeChecker {
             System.out.println("Type checking failed!");
         }
     }
-    
+
 }
