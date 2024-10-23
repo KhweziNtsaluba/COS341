@@ -187,94 +187,69 @@ public class TypeChecker {
                 return "t";
 
             case "Const":
-                return typeofConst(node);
+                return typeofConst(node.getChildren().get(0).getValue());
+
+            case "true":
+            case "false":
+                return "b";
+
+            case "Term":
+                return typeof(node.getChildren().get(0));
+
+            case "factor":
+                return typeof(node.getChildren().get(0));
 
             default:
-                return "u"; // Undefined
+                System.out.println("Warning: Unrecognized type " + nodeType);
+                return null;
         }
     }
 
-    private String typeofConst(ASTNode constant) {
-        String tokenClass = constant.getValue();
-        if (tokenClass.equals("N"))
-            return "n"; 
-        if (tokenClass.equals("T"))
-            return "t"; 
-        return "u"; 
+    private String typeofConst(String value) {
+        if (value.matches("[0-9]+"))
+            return "n";
+        else
+            return "t";
     }
 
     public static void main(String[] args) {
-        // Create the root of the program AST: PROG ::= main GLOBVARS ALGO FUNCTIONS
-        ASTNode program = new ASTNode("Program");
+        // Create an AST for a small program
 
-        // Create global variables: num myVar
-        ASTNode globalVars = new ASTNode("GlobalVars");
-        ASTNode varDecl = new ASTNode("VarDecl");
-        ASTNode varType = new ASTNode("num");
-        ASTNode varName = new ASTNode("V_myVar");
-        varDecl.addChild(varType);
-        varDecl.addChild(varName);
-        globalVars.addChild(varDecl);
+        // Global variables section: int x
+        InternalTreeNode globVars = new InternalTreeNode("GlobalVars");
+        InternalTreeNode varDecl = new InternalTreeNode("VarDecl");
+        varDecl.addChild(new LeafTreeNode(new Token(TokenClass.RESERVED_KEYWORD, "num"))); // Type: int
+        varDecl.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "x"))); // Variable: x
+        globVars.addChild(varDecl);
 
-        // Create an algorithm (ALGO) node: begin skip end
-        ASTNode algo = new ASTNode("Algo");
-        ASTNode instruc = new ASTNode("Instruc");
-        ASTNode skipCommand = new ASTNode("skip");
-        instruc.addChild(skipCommand);
-        algo.addChild(instruc);
+        // Algorithm section: x := 5;
+        InternalTreeNode algo = new InternalTreeNode("Algo");
+        InternalTreeNode assignInstruc = new InternalTreeNode("assign");
+        assignInstruc.addChild(new LeafTreeNode(new Token(TokenClass.VARIABLE, "x"))); // Variable: x
+        assignInstruc.addChild(new LeafTreeNode(new Token(TokenClass.NUMBER, "5"))); // Constant: 5
+        algo.addChild(assignInstruc);
 
-        // Create a function declaration: num F_myFunction(num V_param1, num V_param2)
-        ASTNode functions = new ASTNode("Functions");
-        ASTNode funcDecl = new ASTNode("FuncDecl");
+        // Functions section (empty for now)
+        InternalTreeNode functions = new InternalTreeNode("Functions");
 
-        // Function header: num F_myFunction
-        ASTNode funcHeader = new ASTNode("FuncHeader");
-        ASTNode returnType = new ASTNode("num");
-        ASTNode funcName = new ASTNode("F_myFunction");
-        funcHeader.addChild(returnType);
-        funcHeader.addChild(funcName);
+        // Create the full program node
+        InternalTreeNode program = new InternalTreeNode("Program");
+        program.addChild(globVars); // Global vars
+        program.addChild(algo); // Algorithm
+        program.addChild(functions); // Functions
 
-        // Function parameters: (num V_param1, num V_param2)
-        ASTNode paramDecl1 = new ASTNode("parDec");
-        ASTNode paramType1 = new ASTNode("num");
-        ASTNode paramName1 = new ASTNode("V_param1");
-        paramDecl1.addChild(paramType1);
-        paramDecl1.addChild(paramName1);
+        // TypeChecker instance
+        TypeChecker typeChecker = new TypeChecker();
 
-        ASTNode paramDecl2 = new ASTNode("parDec");
-        ASTNode paramType2 = new ASTNode("num");
-        ASTNode paramName2 = new ASTNode("V_param2");
-        paramDecl2.addChild(paramType2);
-        paramDecl2.addChild(paramName2);
+        // Run the type checker on the AST
+        boolean result = typeChecker.checkProgram(program);
 
-        // Add parameters to the function header
-        funcHeader.addChild(paramDecl1);
-        funcHeader.addChild(paramDecl2);
-
-        // Function body: return V_myVar;
-        ASTNode funcBody = new ASTNode("Body");
-        ASTNode returnInstr = new ASTNode("return");
-        ASTNode returnVar = new ASTNode("V_myVar");
-        returnInstr.addChild(returnVar);
-        funcBody.addChild(returnInstr);
-
-        // Add the header and body to the function declaration
-        funcDecl.addChild(funcHeader);
-        funcDecl.addChild(funcBody);
-
-        // Add the function declaration to the functions section
-        functions.addChild(funcDecl);
-
-        // Add global variables, algorithm, and functions to the program
-        program.addChild(globalVars);
-        program.addChild(algo);
-        program.addChild(functions);
-
-        // Perform type checking on the constructed program
-        TypeChecker checker = new TypeChecker();
-        boolean result = checker.checkProgram(program);
-
-        // Output the result
-        System.out.println("Type check result: " + (result ? "Success" : "Failure"));
+        // Output result
+        if (result) {
+            System.out.println("Type checking passed successfully!");
+        } else {
+            System.out.println("Type checking failed!");
+        }
     }
+
 }

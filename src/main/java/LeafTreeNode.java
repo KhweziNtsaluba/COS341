@@ -13,6 +13,11 @@ public class LeafTreeNode implements ASTNode {
     }
 
     @Override
+    public String getValue() {
+        return token.getTokenWord();
+    }
+
+    @Override
     public String toString() {
         return token.getTokenWord();
     }
