@@ -65,21 +65,36 @@ public class ScopeAnalyser {
                 
                 //////////// local variables ////////////
                 // Handle algorithm: instructions within the "begin ... end" block
+                // ALGO -> begin INSTRUC end
                 case "ALGO": {
                     InternalTreeNode instrucNode = (InternalTreeNode) internalNode.getChildren().get(1); // INSTRUC
                     crawl(instrucNode); // Process the instructions
                     break;
                 }
                 
-                // // Process each instruction within the algorithm (if there are any)
-                // case "INSTRUC":
-                //     if (!internalNode.getChildren().isEmpty()) {
-                //         InternalTreeNode commandNode = (InternalTreeNode) internalNode.getChildren().get(0); // COMMAND
-                //         handleCommand(commandNode); // Process command
-                //         InternalTreeNode instrucNode = (InternalTreeNode) internalNode.getChildren().get(2); // Next INSTRUC
-                //         crawl(instrucNode); // Process remaining instructions
-                //     }
-                // break;
+                // Process each instruction within the algorithm (if there are any)
+                // INSTRUC -> COMMAND ; INSTRUC 
+                case "INSTRUC":
+                    if (!internalNode.getChildren().isEmpty()) {
+                        InternalTreeNode commandNode = (InternalTreeNode) internalNode.getChildren().get(0); // COMMAND
+                        handleCommand(commandNode); // Process command
+                        InternalTreeNode instrucNode = (InternalTreeNode) internalNode.getChildren().get(2); // Next INSTRUC
+                        crawl(instrucNode); // Process remaining instructions
+                    }
+                break;
+
+                case "ATOMIC": {
+                    handleAtomic(internalNode);
+                    break;
+                }
+
+                case "TERM": {
+                    handleTerm(internalNode);
+                    break;
+                }
+
+                default:
+                    throw new Exception(internalNode.getGrammarVariable() + " has no traverse rules");
             }
 
         }
@@ -93,7 +108,6 @@ public class ScopeAnalyser {
 
     //////////// global variable helpers ////////////////
 
-    
     private void handleGlobalVarDeclarations(InternalTreeNode globVarsNode) throws Exception {
         // Base case: empty GLOBVARS (i.e. epsilon)
         if (globVarsNode.getChildren().isEmpty()) {
@@ -129,7 +143,7 @@ public class ScopeAnalyser {
         return variableNode.getToken().getTokenWord();
     }
     
-    ////////////// Function Helpers ////////////////
+    ////////////// Function Declaration Helpers ////////////////
     
     private void handleFunctionDeclaration(InternalTreeNode declNode) throws Exception {
         InternalTreeNode headerNode = (InternalTreeNode) declNode.getChildren().get(0); // HEADER
@@ -140,7 +154,7 @@ public class ScopeAnalyser {
         // Enter a new scope for the function body
         /* Every function declaration opens its own scope */
         symbolTable.pushNewScope();
-        crawl(bodyNode); // Process the function body (PROLOG, LOCVARS, ALGO, etc.)
+        crawl(bodyNode); // Process the function body (BODY -> PROLOG LOCVARS ALGO EPILOG SUBFUNCS end)
         symbolTable.popScope();
     }
 
@@ -167,7 +181,9 @@ public class ScopeAnalyser {
         for (int i = 0; i < 3; i++) {
             InternalTreeNode vnameNode = (InternalTreeNode) headerNode.getChildren().get(i * 2 + 3); // VNAME
             String paramName = extractVariableName(vnameNode);
-            symbolTable.bind(paramName, new SymbolInfo("parameter")); // Mark as parameter
+
+            // assuming all arguments will be of type num
+            symbolTable.bind(paramName, new SymbolInfo("num"));
         }
     }
 
@@ -176,7 +192,179 @@ public class ScopeAnalyser {
         LeafTreeNode functionNode = (LeafTreeNode) fnameNode.getChildren().get(0); // Get the function name token
         return functionNode.getToken().getTokenWord();
     }
+
+
+    ///////////// Command Helpers ////////////////
+
+    // COMMAND -> skip | halt | print ATOMIC | ASSIGN | CALL | BRANCH
+    private void handleCommand(InternalTreeNode commandNode) throws Exception {
+        ASTNode commandChild = commandNode.getChildren().get(0);
+        String commandType = null;
+
+        if(commandChild instanceof InternalTreeNode){
+            commandType = ((InternalTreeNode) commandChild).getGrammarVariable();
+        }
+        else if (commandChild instanceof LeafTreeNode){
+            commandType = ((LeafTreeNode) commandChild).toString();
+        }
+        else {
+            throw new Exception("Node has invalid instance type");
+        }
+
+        // handle different types of commands
+        switch (commandType) {
+            // No semantic action needed for "skip" or "halt"
+            case "skip":
+            case "halt":
+            break;
+
+            case "print":
+                InternalTreeNode atomicNode = (InternalTreeNode) commandNode.getChildren().get(1); // ATOMIC
+                crawl(atomicNode); // Check if the variable exists -- handle local variable usage
+                break;
+            
+            case "ASSIGN":
+                handleAssignment(commandNode);
+                break;
+
+            case "CALL":
+                handleFunctionCall(commandNode);
+                break;
     
+            // case "BRANCH":
+            //     handleBranch(commandNode);
+            //     break;
+            
+            default:
+                throw new Exception("Unknown COMMAND: " + commandType);
+    
+        }
+    }
+
+    // ASSIGN -> VNAME <input | VNAME = TERM
+    private void handleAssignment(InternalTreeNode assignNode) throws Exception {
+        InternalTreeNode vnameNode = (InternalTreeNode) assignNode.getChildren().get(0); // VNAME
+        String varName = extractVariableName(vnameNode);
+
+        // Ensure the variable has been declared
+        if (symbolTable.lookup(varName, true) == null) {
+            throw new Exception("Undeclared variable: " + varName);
+        }
+
+        // Process the right-hand side (TERM)
+        if (assignNode.getChildren().size() > 2) {
+            InternalTreeNode termNode = (InternalTreeNode) assignNode.getChildren().get(2); // TERM
+            crawl(termNode); // Process the term (expression or function call)
+        }
+    }
+
+    // TERM -> ATOMIC | CALL | OP
+    private void handleTerm(InternalTreeNode termNode) throws Exception {
+         // Check if the term is ATOMIC, CALL, or OP
+        InternalTreeNode termChild = (InternalTreeNode) termNode.getChildren().get(0);
+        String termType = termChild.getGrammarVariable();
+
+        switch (termType) {
+            case "ATOMIC":
+                handleAtomic(termChild); // Check variable existence or process constant
+                break;
+    
+            case "CALL":
+                handleFunctionCall(termChild); // Ensure function exists and arguments are valid
+                break;
+    
+            case "OP":
+                handleOperation(termChild); // Process operation recursively
+                break;
+    
+            default:
+                throw new Exception("Unknown TERM type: " + termType);
+        }
+    }
+
+    // ATOMIC must always be declared (if it does not evaluate to CONST)
+    private void handleAtomic(InternalTreeNode atomicNode) throws Exception {
+        InternalTreeNode atomicChild = (InternalTreeNode) atomicNode.getChildren().get(0); // VNAME or CONST
+        String atomicChildType = atomicChild.getGrammarVariable();
+
+        if(atomicChildType == "VNAME"){
+            // handle vname case - check if variable is defined
+            String varName = extractVariableName(atomicChild);
+            SymbolInfo varInfo = symbolTable.lookup(varName, true);
+
+            if (varInfo == null) {
+                throw new Exception("Variable '" + varName + "' is used but not declared.");
+            }
+        }
+        else if (atomicChildType == "CONST"){
+            // handle const case - Constant: No need for declaration check
+            LeafTreeNode constLeafNode = (LeafTreeNode) atomicChild.getChildren().get(0); // a token of Token-Class N from the Lexer
+            String constantValue = atomicNode.toString();
+        }
+    }
+
+
+    ////////////// Function Call Helpers ///////////////
+
+    // CALL -> FNAME( ATOMIC , ATOMIC , ATOMIC )
+    private void handleFunctionCall(InternalTreeNode callNode) throws Exception {
+        // Extract the function name (FNAME)
+        InternalTreeNode fnameNode = (InternalTreeNode) callNode.getChildren().get(0); // FNAME
+        String functionName = extractFunctionName(fnameNode);
+
+        SymbolInfo functionInfo = symbolTable.lookup(functionName, true);
+
+        if (functionInfo == null) { // function not declared
+            throw new Exception("Function '" + functionName + "' is called but not declared.");
+        }
+
+        // Process function arguments (if any)
+        for (int i = 0; i < 3; i++) {
+            InternalTreeNode argNode = (InternalTreeNode) callNode.getChildren().get(i * 2 + 2); // ATOMIC
+            handleAtomic(argNode); // Ensure the arguments are valid (could be variables or constants)
+        }
+    }
+
+    ////////////// Operation Call Helpers ///////////////
+
+    //OP -> UNOP( ARG ) | BINOP( ARG , ARG )
+    public void handleOperation(InternalTreeNode opNode) throws Exception {
+        InternalTreeNode opChild = (InternalTreeNode) opNode.getChildren().get(0); // UNOP or BINOP
+        String opChildType = opChild.getGrammarVariable();
+
+        if (opChildType.equals("UNOP")) {
+            // Unary operation: process the argument
+            InternalTreeNode argNode = (InternalTreeNode) opNode.getChildren().get(2); // ARG
+            handleArgument(argNode); // Process the term inside the unary operation
+        }
+        else if (opChildType.equals("BINOP")) {
+            // Binary operation: process both arguments
+            InternalTreeNode arg1Node = (InternalTreeNode) opNode.getChildren().get(2); // First ARG
+            InternalTreeNode arg2Node = (InternalTreeNode) opNode.getChildren().get(4); // Second ARG
+            handleArgument(arg1Node); // Process the first term
+            handleArgument(arg2Node); // Process the second term
+        }
+        else {
+            throw new Exception("Unknown operation type: " + opChildType);
+        }
+    }
+
+    // ARG -> ATOMIC | OP
+    public void handleArgument(InternalTreeNode argNode) throws Exception {
+        InternalTreeNode argChildNode = (InternalTreeNode) argNode.getChildren().get(0);
+        String argChildType = argNode.getGrammarVariable();
+
+        switch (argChildType) {
+            case "ATOMIC":
+                handleAtomic(argChildNode);
+            case "OP":
+                handleOperation(argChildNode);
+            default:
+            throw new UnsupportedOperationException("Unknown ARG type: " + argChildType);
+        }
+    }
+
+    ////////////// Function Body Helpers ///////////////
 
     // Handle InternalTreeNode (non-terminal nodes)
     private void handleInternalNode(InternalTreeNode node) {

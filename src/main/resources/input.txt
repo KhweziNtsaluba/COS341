@@ -1,6 +1,16 @@
 main
 num V_somevar, text V_hellothe,
 begin
+    V_var1 = 5;
+    if grt(V_var1 , 10) then
+        begin
+            print V_var1;
+        end
+    else
+        begin
+            V_var1 = add(V_var1 , 5);
+        end
+    ;
 end
 void F_printall( V_var1 , V_var2 , V_var3 )
 {
